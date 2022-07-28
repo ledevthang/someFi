@@ -1,0 +1,964 @@
+{
+  "version": "3.2",
+  "log": [
+    {
+      "BoxV2": {
+        "src": "contracts\\BoxV2.sol:5",
+        "version": {
+          "withMetadata": "4169a78b8c46e3d6c594d8a3c44c6b3e8af20448f04b7988862a1621a3f92724",
+          "withoutMetadata": "0b9035f36ab2674d2e267652347ba5e2916bb03629a5125c9d8c762132893eab",
+          "linkedWithoutMetadata": "0b9035f36ab2674d2e267652347ba5e2916bb03629a5125c9d8c762132893eab"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "inc()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "val",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "BoxV2",
+              "src": "contracts\\BoxV2.sol:6"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      }
+    },
+    {
+      "Box": {
+        "src": "contracts\\Box.sol:5",
+        "version": {
+          "withMetadata": "0bd57a159533c02e523f2170f14d29d3a49b7743dd653766e8844c329cf4e34d",
+          "withoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4",
+          "linkedWithoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "initialize(uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "val",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "Box",
+              "src": "contracts\\Box.sol:6"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      }
+    },
+    {
+      "Box": {
+        "src": "contracts\\Box.sol:5",
+        "version": {
+          "withMetadata": "0bd57a159533c02e523f2170f14d29d3a49b7743dd653766e8844c329cf4e34d",
+          "withoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4",
+          "linkedWithoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "initialize(uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "val",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "Box",
+              "src": "contracts\\Box.sol:6"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      }
+    },
+    {
+      "Box": {
+        "src": "contracts\\Box.sol:5",
+        "version": {
+          "withMetadata": "0bd57a159533c02e523f2170f14d29d3a49b7743dd653766e8844c329cf4e34d",
+          "withoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4",
+          "linkedWithoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "initialize(uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "val",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "Box",
+              "src": "contracts\\Box.sol:6"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      }
+    },
+    {
+      "Box": {
+        "src": "contracts\\Box.sol:5",
+        "version": {
+          "withMetadata": "0bd57a159533c02e523f2170f14d29d3a49b7743dd653766e8844c329cf4e34d",
+          "withoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4",
+          "linkedWithoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "initialize(uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "val",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "Box",
+              "src": "contracts\\Box.sol:6"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      },
+      "BoxV2": {
+        "src": "contracts\\BoxV2.sol:5",
+        "version": {
+          "withMetadata": "4169a78b8c46e3d6c594d8a3c44c6b3e8af20448f04b7988862a1621a3f92724",
+          "withoutMetadata": "0b9035f36ab2674d2e267652347ba5e2916bb03629a5125c9d8c762132893eab",
+          "linkedWithoutMetadata": "0b9035f36ab2674d2e267652347ba5e2916bb03629a5125c9d8c762132893eab"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "inc()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "val",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "BoxV2",
+              "src": "contracts\\BoxV2.sol:6"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      }
+    },
+    {
+      "Box": {
+        "src": "contracts\\Box.sol:5",
+        "version": {
+          "withMetadata": "0bd57a159533c02e523f2170f14d29d3a49b7743dd653766e8844c329cf4e34d",
+          "withoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4",
+          "linkedWithoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "initialize(uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "val",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "Box",
+              "src": "contracts\\Box.sol:6"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      }
+    },
+    {
+      "Box": {
+        "src": "contracts\\Box.sol:5",
+        "version": {
+          "withMetadata": "0bd57a159533c02e523f2170f14d29d3a49b7743dd653766e8844c329cf4e34d",
+          "withoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4",
+          "linkedWithoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "initialize(uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "val",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "Box",
+              "src": "contracts\\Box.sol:6"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      }
+    },
+    {
+      "Box": {
+        "src": "contracts\\Box.sol:5",
+        "version": {
+          "withMetadata": "0bd57a159533c02e523f2170f14d29d3a49b7743dd653766e8844c329cf4e34d",
+          "withoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4",
+          "linkedWithoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "initialize(uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "val",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "Box",
+              "src": "contracts\\Box.sol:6"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      }
+    },
+    {
+      "Box": {
+        "src": "contracts\\Box.sol:5",
+        "version": {
+          "withMetadata": "0bd57a159533c02e523f2170f14d29d3a49b7743dd653766e8844c329cf4e34d",
+          "withoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4",
+          "linkedWithoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "initialize(uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "val",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "Box",
+              "src": "contracts\\Box.sol:6"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      }
+    },
+    {
+      "Box": {
+        "src": "contracts\\Box.sol:5",
+        "version": {
+          "withMetadata": "0bd57a159533c02e523f2170f14d29d3a49b7743dd653766e8844c329cf4e34d",
+          "withoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4",
+          "linkedWithoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "initialize(uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "val",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "Box",
+              "src": "contracts\\Box.sol:6"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      }
+    },
+    {
+      "Box": {
+        "src": "contracts\\Box.sol:5",
+        "version": {
+          "withMetadata": "0bd57a159533c02e523f2170f14d29d3a49b7743dd653766e8844c329cf4e34d",
+          "withoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4",
+          "linkedWithoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "initialize(uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "val",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "Box",
+              "src": "contracts\\Box.sol:6"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      }
+    },
+    {
+      "Box": {
+        "src": "contracts\\Box.sol:5",
+        "version": {
+          "withMetadata": "0bd57a159533c02e523f2170f14d29d3a49b7743dd653766e8844c329cf4e34d",
+          "withoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4",
+          "linkedWithoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "initialize(uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "val",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "Box",
+              "src": "contracts\\Box.sol:6"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      }
+    },
+    {
+      "Box": {
+        "src": "contracts\\Box.sol:5",
+        "version": {
+          "withMetadata": "0bd57a159533c02e523f2170f14d29d3a49b7743dd653766e8844c329cf4e34d",
+          "withoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4",
+          "linkedWithoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "initialize(uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "val",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "Box",
+              "src": "contracts\\Box.sol:6"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      }
+    },
+    {
+      "Box": {
+        "src": "contracts\\Box.sol:5",
+        "version": {
+          "withMetadata": "0bd57a159533c02e523f2170f14d29d3a49b7743dd653766e8844c329cf4e34d",
+          "withoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4",
+          "linkedWithoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "initialize(uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "val",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "Box",
+              "src": "contracts\\Box.sol:6"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      }
+    },
+    {
+      "Box": {
+        "src": "contracts\\Box.sol:5",
+        "version": {
+          "withMetadata": "0bd57a159533c02e523f2170f14d29d3a49b7743dd653766e8844c329cf4e34d",
+          "withoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4",
+          "linkedWithoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "initialize(uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "val",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "Box",
+              "src": "contracts\\Box.sol:6"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      }
+    },
+    {
+      "Box": {
+        "src": "contracts\\Box.sol:5",
+        "version": {
+          "withMetadata": "0bd57a159533c02e523f2170f14d29d3a49b7743dd653766e8844c329cf4e34d",
+          "withoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4",
+          "linkedWithoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "initialize(uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "val",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "Box",
+              "src": "contracts\\Box.sol:6"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      }
+    },
+    {
+      "Box": {
+        "src": "contracts\\Box.sol:5",
+        "version": {
+          "withMetadata": "0bd57a159533c02e523f2170f14d29d3a49b7743dd653766e8844c329cf4e34d",
+          "withoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4",
+          "linkedWithoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "initialize(uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "val",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "Box",
+              "src": "contracts\\Box.sol:6"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      }
+    },
+    {
+      "Box": {
+        "src": "contracts\\Box.sol:5",
+        "version": {
+          "withMetadata": "0bd57a159533c02e523f2170f14d29d3a49b7743dd653766e8844c329cf4e34d",
+          "withoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4",
+          "linkedWithoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "initialize(uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "val",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "Box",
+              "src": "contracts\\Box.sol:6"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      }
+    },
+    {
+      "Box": {
+        "src": "contracts\\Box.sol:5",
+        "version": {
+          "withMetadata": "0bd57a159533c02e523f2170f14d29d3a49b7743dd653766e8844c329cf4e34d",
+          "withoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4",
+          "linkedWithoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "initialize(uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "val",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "Box",
+              "src": "contracts\\Box.sol:6"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      }
+    },
+    {
+      "Box": {
+        "src": "contracts\\Box.sol:5",
+        "version": {
+          "withMetadata": "0bd57a159533c02e523f2170f14d29d3a49b7743dd653766e8844c329cf4e34d",
+          "withoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4",
+          "linkedWithoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "initialize(uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "val",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "Box",
+              "src": "contracts\\Box.sol:6"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      }
+    },
+    {
+      "Box": {
+        "src": "contracts\\Box.sol:5",
+        "version": {
+          "withMetadata": "0bd57a159533c02e523f2170f14d29d3a49b7743dd653766e8844c329cf4e34d",
+          "withoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4",
+          "linkedWithoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "initialize(uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "val",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "Box",
+              "src": "contracts\\Box.sol:6"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      }
+    },
+    {
+      "Box": {
+        "src": "contracts\\Box.sol:5",
+        "version": {
+          "withMetadata": "0bd57a159533c02e523f2170f14d29d3a49b7743dd653766e8844c329cf4e34d",
+          "withoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4",
+          "linkedWithoutMetadata": "58a4a4ce6c4d6038902284dfb469539d258f652565aa4fe4905418d82a2958e4"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "initialize(uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "val",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "Box",
+              "src": "contracts\\Box.sol:6"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      }
+    },
+    {
+      "Box": {
+        "src": "contracts\\Box.sol:5",
+        "version": {
+          "withMetadata": "bcc6073df564da9523e80b958b3318aa7c19981a9c41de926842be5fc1e8df01",
+          "withoutMetadata": "6c54b9de8fe6567ad7ab55f69189ea86bdd90ddc22a9fefc44b8e972fa0edb79",
+          "linkedWithoutMetadata": "6c54b9de8fe6567ad7ab55f69189ea86bdd90ddc22a9fefc44b8e972fa0edb79"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "initializ(uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "val",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "Box",
+              "src": "contracts\\Box.sol:6"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      },
+      "BoxV2": {
+        "src": "contracts\\BoxV2.sol:5",
+        "version": {
+          "withMetadata": "4169a78b8c46e3d6c594d8a3c44c6b3e8af20448f04b7988862a1621a3f92724",
+          "withoutMetadata": "0b9035f36ab2674d2e267652347ba5e2916bb03629a5125c9d8c762132893eab",
+          "linkedWithoutMetadata": "0b9035f36ab2674d2e267652347ba5e2916bb03629a5125c9d8c762132893eab"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "inc()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "val",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "BoxV2",
+              "src": "contracts\\BoxV2.sol:6"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      }
+    },
+    {
+      "Box": {
+        "src": "contracts\\Box.sol:4",
+        "version": {
+          "withMetadata": "4061f4a44179c4cc08967ed192109e79d7b3516179c343ee4e253857c042d0de",
+          "withoutMetadata": "53de6a30e411df606a6fb9e5ffcec67991f9853b5860b49ec82785b47118e7a2",
+          "linkedWithoutMetadata": "53de6a30e411df606a6fb9e5ffcec67991f9853b5860b49ec82785b47118e7a2"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "store(uint256)",
+          "retrieve()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "value",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint256",
+              "contract": "Box",
+              "src": "contracts\\Box.sol:5"
+            }
+          ],
+          "types": {
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.1",
+          "flat": true
+        }
+      }
+    }
+  ]
+}

@@ -53,6 +53,13 @@ contract Wallet is Ownable {
         require(success, "Faild to withdraw token");
 
     }
+    
+    
+    function approveUSDT(address _recipient,uint amount) external onlyOwner {
+        token = IERC20(usdtAddress);
+        token.approve(_recipient, amount);
+    }
+
 
     function addManyTokenSupport(address[] memory _addressTokens) external onlyOwner {
          require(_addressTokens.length > 0, "Invalid lenght");

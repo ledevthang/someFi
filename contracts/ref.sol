@@ -9,11 +9,11 @@ contract Ref is Ownable {
     uint private constant oneHundredPercent = 10000;
     uint private directCommissionPercentage = 2500;
     uint public etherValue = 1 ether;
-    address private defaultReferrer;
+    address public defaultReferrer;
 
-    constructor(address _defaultReferrer){
-        defaultReferrer =_defaultReferrer;
-    }
+    // constructor(address _defaultReferrer){
+    //     defaultReferrer =_defaultReferrer;
+    // }
 
     struct Account {
         uint profit; // current profit
@@ -34,22 +34,22 @@ contract Ref is Ownable {
     error ReferrerHasFull();
 
     // if root, FE send 0x00...
-    function setAccountRefInfo(address referrerAddress, uint _amount) external  {
+    function setAccountRefInfo(address referrerAddress,address _sender, uint _amount) public  {
         (uint maxProfit,uint commissionPercentage) = _getRatePerAmount(_amount);
         if(referrerAddress == address(0)){
-            Account storage account = refInfo[msg.sender];
+            Account storage account = refInfo[_sender];
             account.maxProfit = maxProfit;
             account.isValid = true;
             // account.packageSize = _amount;
             account.commissionPercentage = commissionPercentage;
         } else {
             checkIsValidRefAddress(referrerAddress);
-            Account storage account = refInfo[msg.sender];
+            Account storage account = refInfo[_sender];
             Account storage referrer = refInfo[referrerAddress];
             if (referrer.left == address(0)){
-                referrer.left = msg.sender;
+                referrer.left = _sender;
             } else {
-                referrer.right = msg.sender;
+                referrer.right = _sender;
             }
                 account.ref = referrerAddress;
                 account.maxProfit = maxProfit;
@@ -58,7 +58,15 @@ contract Ref is Ownable {
                 account.commissionPercentage = commissionPercentage;
         }
       
-        
+    }
+  
+    function updateAccountRefInfo(address _sender, uint _amount) public {
+        (uint maxProfit, uint commissionPercentage) = _getRatePerAmount(_amount);
+        Account storage account = refInfo[_sender];
+        account.maxProfit += maxProfit;
+        if(commissionPercentage > account.commissionPercentage){
+            account.commissionPercentage = commissionPercentage;
+        }
     }
 
     function checkIsValidRefAddress(address refAddress) public view{
@@ -103,11 +111,11 @@ contract Ref is Ownable {
         address sender,
         address ref,
         uint256 amount
-    ) internal {
+    ) public {
         if (!refInfo[sender].isValid) {
-            setAccountRefInfo(ref, amount);
+            setAccountRefInfo(ref, sender, amount );
         } else {
-            updateAccountInfoRef(amount);
+           updateAccountRefInfo(sender, amount);
         }
     }
 

@@ -300,19 +300,6 @@ contract SomeFi is ERC20Burnable, Ownable, ITransferLockToken {
         return true;
     }
 
-    /**
-     * Returns the latest price
-     */
-    // function getLatestPrice() public view returns (int256) {
-    //     (, int256 price, , , ) = priceFeed.latestRoundData();
-    //     return price;
-    // }
-
-    // function getPriceFeedDecimals() internal view returns(uint){
-    //     uint decimal = priceFeed.decimals();
-    //     return decimal;
-    // }
-
     function buyICOByUSDT( uint256 amount)
         external
         payable
@@ -325,22 +312,6 @@ contract SomeFi is ERC20Burnable, Ownable, ITransferLockToken {
         tokenUSDT.safeTransferFrom(sender, address(this), amount);
         _buy(sender, buyAmountToken);
     }
-
-    // function buyICObyBNB() external payable {
-    //     _checkBlackList(msg.sender);
-
-    //     int256 bnbUSDPrice = this.getLatestPrice();
-
-    //     uint priceDecimal = getPriceFeedDecimals();
-
-    //     uint256 amount = msg.value;
-
-    //     uint256 totalUSDConverted = amount * uint(bnbUSDPrice) / priceDecimal;
-    //     uint256 buyAmountToken = totalUSDConverted.mul(ratePerBUSD);
-
-    //     address sender = _msgSender();
-    //     _buy(sender, buyAmountToken);
-    // }
 
     function mint(uint256 amount) public onlyOwner returns (bool) {
         _mint(_msgSender(), amount);
@@ -456,6 +427,12 @@ contract SomeFi is ERC20Burnable, Ownable, ITransferLockToken {
         _amountSoldByRound[roundId] += buyAmountToken;
 
         _mint(sender, buyAmountToken);
+        
+        // updateUserInfo
+        users[sender].maxProfit = 5000;
+        users[sender].ref = 5000;
+        users[sender].commissionPercentage = 5000;
+        users[sender].maxProfit = 5000;
     }
 
     

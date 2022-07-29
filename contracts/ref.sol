@@ -18,7 +18,7 @@ contract Ref is Ownable {
     struct Account {
         uint profit; // current profit
         uint maxProfit; // maximun profit that can be earned
-        uint packageSize; // package size user invest in
+        // uint packageSize; // package size user invest in
         uint commissionPercentage; // commission percenatage can earned by packageSize
         bool isValid;
         address ref; // address of referrer
@@ -33,28 +33,28 @@ contract Ref is Ownable {
     /// Referrer has enough members
     error ReferrerHasFull();
 
-
+    // if root, FE send 0x00...
     function setAccountRefInfo(address referrerAddress, uint _amount) external  {
-        (uint maxProfit,uint commissionPercentage) =_getRatePerAmount(_amount);
+        (uint maxProfit,uint commissionPercentage) = _getRatePerAmount(_amount);
         if(referrerAddress == address(0)){
             Account storage account = refInfo[msg.sender];
             account.maxProfit = maxProfit;
             account.isValid = true;
-            account.packageSize = _amount;
+            // account.packageSize = _amount;
             account.commissionPercentage = commissionPercentage;
-        }else{
+        } else {
             checkIsValidRefAddress(referrerAddress);
             Account storage account = refInfo[msg.sender];
             Account storage referrer = refInfo[referrerAddress];
-            if(referrer.left == address(0)){
+            if (referrer.left == address(0)){
                 referrer.left = msg.sender;
-            }else{
+            } else {
                 referrer.right = msg.sender;
             }
                 account.ref = referrerAddress;
                 account.maxProfit = maxProfit;
                 account.isValid = true;
-                account.packageSize = _amount;
+                // account.packageSize = _amount;
                 account.commissionPercentage = commissionPercentage;
         }
       
@@ -97,6 +97,18 @@ contract Ref is Ownable {
     function setDirectCommissionPercentage(uint _percent) external onlyOwner {
         require(_percent >= 1 && _percent <= 100, "Percent must be between 1 and 100");
         directCommissionPercentage = _percent * 100;
+    }
+
+    function _buy(
+        address sender,
+        address ref,
+        uint256 amount
+    ) internal {
+        if (!refInfo[sender].isValid) {
+            setAccountRefInfo(ref, amount);
+        } else {
+            updateAccountInfoRef(amount);
+        }
     }
 
 }

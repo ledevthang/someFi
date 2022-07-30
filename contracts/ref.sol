@@ -18,9 +18,11 @@ contract Ref is Ownable {
     struct Account {
         uint profit; // current profit
         uint maxProfit; // maximun profit that can be earned
-        uint packageSize; // package size user invest in
+        uint profitClaimed; // profit user claimed
+        uint currentPackageSize; // largest package size user invested
+        uint totalPackageSize; // total package size user invested
         uint branchInvestment; // total branch investment of this account
-        uint commissionPercentage; // commission percenatage can earned by packageSize
+        uint commissionPercentage; // commission percenatage can earned by currentPackageSize
         bool isCanBeRef;
         address ref; // address of referrer
         address left; // address of child left
@@ -36,45 +38,65 @@ contract Ref is Ownable {
 
     // if root, FE send 0x00...
     function setAccountRefInfo(address referrerAddress,address _sender, uint _amount) public  {
-        (uint maxProfit,uint commissionPercentage, uint packageSize) = _getRatePerAmount(_amount);
+        (uint maxProfit,uint commissionPercentage, uint currentPackageSize) = _getRatePerAmount(_amount);
         Account storage account = refInfo[_sender];
         account.maxProfit = maxProfit;
         account.isCanBeRef = true;
-        account.packageSize = packageSize;
+        account.currentPackageSize = currentPackageSize;
+        account.totalPackageSize = currentPackageSize;
         account.commissionPercentage = commissionPercentage;
-        account.branchInvestment += packageSize; // update branch invesment
+        account.branchInvestment += currentPackageSize; // update branch invesment
         // check if ref of this account not root
         if (referrerAddress != address(0)) {
             checkIsValidRefAddress(referrerAddress); // check if ref is valid (bought)
             account.ref = referrerAddress;
             Account storage referrer = refInfo[referrerAddress];
-            referrer.branchInvestment += packageSize; // update branch invesment of referrer
+            referrer.branchInvestment += currentPackageSize; // update branch invesment of referrer
             if (referrer.left == address(0)){
                 referrer.left = _sender;
+                updateSenderSRef(_sender);
             } else {
                 referrer.right = _sender;
-                // account.ref = referrerAddress; // set ref of this account
-                // if (_sender == referrer.right) { // earn directCommission
-                if (packageSize > refInfo[referrer.left].packageSize) { // check if weak branch is left => update ref profit = left
-                    referrer.profit += (refInfo[referrer.left].packageSize * directCommissionPercentage) / oneHundredPercent;
-                } else { // check if weak branch is right => update ref profit = right
-                    referrer.profit += (packageSize * directCommissionPercentage) / oneHundredPercent;
-                }
+                // earn directCommission
+                // if (currentPackageSize > refInfo[referrer.left].currentPackageSize) { // check if weak branch is left => update ref profit = left
+                //     referrer.profit += (refInfo[referrer.left].currentPackageSize * directCommissionPercentage) / oneHundredPercent;
+                // } else { // check if weak branch is right => update ref profit = right
+                //     referrer.profit += (currentPackageSize * directCommissionPercentage) / oneHundredPercent;
+                // }
                 updateSenderSRef(_sender);
-            // }
             }
         }
       
     }
   
     function updateAccountRefInfo(address _sender, uint _amount) public {
-        (uint maxProfit, uint commissionPercentage, uint packageSize) = _getRatePerAmount(_amount);
+        (uint maxProfit, uint commissionPercentage, uint currentPackageSize) = _getRatePerAmount(_amount);
         Account storage account = refInfo[_sender];
+        Account storage referrer = refInfo[account.ref];
         account.maxProfit += maxProfit;
-        account.branchInvestment += packageSize; // update branch invesment
+        account.branchInvestment += currentPackageSize; // update branch invesment
+        account.totalPackageSize += currentPackageSize; // update current package size
+        referrer.branchInvestment += currentPackageSize; // update referrer investment
         if(commissionPercentage > account.commissionPercentage){
             account.commissionPercentage = commissionPercentage;
-            account.packageSize = packageSize;
+            account.currentPackageSize = currentPackageSize;
+        }
+        // earn directCommission
+        if (account.ref != address(0)) {
+            // if (_sender == referrer.left) {
+            //     if (account.totalPackageSize > refInfo[referrer.right].totalPackageSize) { // check if weak branch is left => update ref profit = left
+            //         referrer.profit = ((refInfo[referrer.right].totalPackageSize * directCommissionPercentage) / oneHundredPercent) - referrer.profitClaimed;
+            //     } else { // check if weak branch is left => update ref profit = left
+            //         referrer.profit = ((account.totalPackageSize * directCommissionPercentage) / oneHundredPercent) - referrer.profitClaimed;
+            //     }
+            // } else {
+            //     if (account.totalPackageSize > refInfo[referrer.left].totalPackageSize) { // check if weak branch is left => update ref profit = left
+            //         referrer.profit = ((refInfo[referrer.left].totalPackageSize * directCommissionPercentage) / oneHundredPercent) - referrer.profitClaimed;
+            //     } else { // check if weak branch is right => update ref profit = right
+            //         referrer.profit = ((account.totalPackageSize * directCommissionPercentage) / oneHundredPercent) - referrer.profitClaimed;
+            //     }
+            // }
+            updateSenderSRef(_sender);
         }
     }
 
@@ -91,30 +113,30 @@ contract Ref is Ownable {
     function _getRatePerAmount(uint _amount) public view returns (uint, uint, uint) {
         uint maxProfit = 0;
         uint commissionPercentage = 0;
-        uint packageSize = 0;
+        uint currentPackageSize = 0;
         if(_amount >= 5000 * etherValue){
             maxProfit = 5000 * 3 * etherValue;
             commissionPercentage = 1000;
-            packageSize = 5000 * etherValue;
+            currentPackageSize = 5000 * etherValue;
         }else if(_amount >= 3000 * etherValue){
             maxProfit = 3000 * 3 * etherValue;
             commissionPercentage = 900;
-            packageSize = 3000 * etherValue;
+            currentPackageSize = 3000 * etherValue;
         }else if(_amount >= 1000 * etherValue){
             maxProfit = 1000 * 3 * etherValue;
             commissionPercentage = 800;
-            packageSize = 1000 * etherValue;
+            currentPackageSize = 1000 * etherValue;
         }else if(_amount >= 500 * etherValue){
             maxProfit = 500 * 3 * etherValue;
             commissionPercentage = 700;
-            packageSize = 500 * etherValue;
+            currentPackageSize = 500 * etherValue;
         }else if(_amount >= 100 * etherValue){
             maxProfit = 100 * 3 * etherValue;
             commissionPercentage = 500;
-            packageSize = 100 * etherValue;
+            currentPackageSize = 100 * etherValue;
         }
 
-        return(maxProfit, commissionPercentage, packageSize);
+        return(maxProfit, commissionPercentage, currentPackageSize);
     }
 
     function setDirectCommissionPercentage(uint _percent) external onlyOwner {
@@ -123,30 +145,36 @@ contract Ref is Ownable {
     }
     function updateSenderSRef (address sender) public returns  (uint) {
         Account storage currentAddress = refInfo[sender]; // create currentAdress
+        address _address = sender;
         uint countRefLevel = 0;
         while (currentAddress.ref != address(0)) { // check if currentAddress have ref
             countRefLevel++;
             Account storage referrer = refInfo[currentAddress.ref]; // create referrer
+
+            referrer.branchInvestment = referrer.totalPackageSize + refInfo[referrer.left].branchInvestment + refInfo[referrer.right].branchInvestment;
+
             // COMPARE WITH OPPOSITE TO UPDATE REFERRER'S PROFIT
-            if (currentAddress.ref == referrer.left) { // check if currentAddress is left
+            if (_address == referrer.left) { // check if currentAddress is left
                 if (referrer.right != address(0)) { // check if referrer have right else NOT RECEIVE COMMISSION PERCENTAGE
                     Account storage right = refInfo[referrer.right]; // create right
                     // EARN COMMISSION PERCENTAGE
                     if (currentAddress.branchInvestment > right.branchInvestment) { // check weak branch is right
-                        referrer.profit += (right.branchInvestment * referrer.commissionPercentage) / oneHundredPercent;
+                        referrer.profit = ((right.branchInvestment * (referrer.commissionPercentage + directCommissionPercentage)) / oneHundredPercent) - referrer.profitClaimed;
                     } else { // check weak branch is current
-                        referrer.profit += (currentAddress.branchInvestment * referrer.commissionPercentage) / oneHundredPercent;
+                        referrer.profit = ((currentAddress.branchInvestment * (referrer.commissionPercentage + directCommissionPercentage)) / oneHundredPercent) - referrer.profitClaimed;
                     }
                 }
             } else { // check if currentAddress is right
                 Account storage left = refInfo[referrer.left]; // create left
                 // EARN COMMISSION PERCENTAGE
                 if (currentAddress.branchInvestment > left.branchInvestment) { // check weak branch is left
-                    referrer.profit += (left.branchInvestment * referrer.commissionPercentage) / oneHundredPercent;
+                    referrer.profit = ((left.branchInvestment * (referrer.commissionPercentage + directCommissionPercentage)) / oneHundredPercent) - referrer.profitClaimed;
                 } else { // check weak branch is current
-                    referrer.profit += (currentAddress.branchInvestment * referrer.commissionPercentage) / oneHundredPercent;
+                    referrer.profit = ((currentAddress.branchInvestment * (referrer.commissionPercentage + directCommissionPercentage)) / oneHundredPercent) - referrer.profitClaimed;
                 }
             }
+            // set new address
+            _address = currentAddress.ref;
             // condition to continue while loop => set currentAddress = it's ref
             currentAddress = refInfo[currentAddress.ref];
         }

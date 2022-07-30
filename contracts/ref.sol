@@ -10,6 +10,7 @@ contract Ref is Ownable {
     uint private directCommissionPercentage = 2500;
     uint public etherValue = 1 ether;
     address public defaultReferrer;
+    uint roundId;
 
     // constructor(address _defaultReferrer){
     //     defaultReferrer =_defaultReferrer;
@@ -29,7 +30,7 @@ contract Ref is Ownable {
         address left; // address of child left
         address right; // address of child right
     }
-    mapping(address => Account) public refInfo;
+    mapping(address => mapping(uint => Account)) public refInfo;
 
     /// Invalid referrer address
     error InvalidReferrerAddress();
@@ -37,10 +38,9 @@ contract Ref is Ownable {
     /// Referrer has enough members
     error ReferrerHasFull();
 
-    // if root, FE send 0x00...
     function setAccountRefInfo(address referrerAddress,address _sender, uint _amount) public  {
         (uint maxProfit,uint commissionPercentage, uint currentPackageSize) = _getRatePerAmount(_amount);
-        Account storage account = refInfo[_sender];
+        Account storage account = refInfo[_sender][roundId];
         account.maxProfit = maxProfit;
         account.isCanBeRef = true;
         account.currentPackageSize = currentPackageSize;
@@ -51,7 +51,7 @@ contract Ref is Ownable {
         if (referrerAddress != address(0)) {
             checkIsValidRefAddress(referrerAddress); // check if ref is valid (bought)
             account.ref = referrerAddress;
-            Account storage referrer = refInfo[referrerAddress];
+            Account storage referrer = refInfo[referrerAddress][roundId];
             referrer.branchInvestment += currentPackageSize; // update branch invesment of referrer
             if (referrer.left == address(0)){
                 referrer.left = _sender;
@@ -65,8 +65,8 @@ contract Ref is Ownable {
   
     function updateAccountRefInfo(address _sender, uint _amount) public {
         (uint maxProfit, uint commissionPercentage, uint currentPackageSize) = _getRatePerAmount(_amount);
-        Account storage account = refInfo[_sender];
-        Account storage referrer = refInfo[account.ref];
+        Account storage account = refInfo[_sender][roundId];
+        Account storage referrer = refInfo[account.ref][roundId];
         account.maxProfit += maxProfit;
         account.branchInvestment += currentPackageSize; // update branch invesment
         account.totalPackageSize += currentPackageSize; // update current package size
@@ -82,7 +82,7 @@ contract Ref is Ownable {
     }
 
     function checkIsValidRefAddress(address refAddress) public view{
-       Account storage ref = refInfo[refAddress];
+       Account storage ref = refInfo[refAddress][roundId];
         if(!ref.isCanBeRef){
             revert InvalidReferrerAddress();
         }
@@ -125,24 +125,24 @@ contract Ref is Ownable {
         directCommissionPercentage = _percent * 100;
     }
     function updateSenderSRef (address sender) public returns  (uint) {
-        Account storage currentAddress = refInfo[sender]; // create currentAdress
+        Account storage currentAddress = refInfo[sender][roundId]; // create currentAdress
         address _address = sender;
         uint countRefLevel = 0;
         while (currentAddress.ref != address(0) && countRefLevel < 15) { // check if currentAddress have ref
-            Account storage referrer = refInfo[currentAddress.ref]; // create referrer
+            Account storage referrer = refInfo[currentAddress.ref][roundId]; // create referrer
 
-            referrer.branchInvestment = referrer.totalPackageSize + refInfo[referrer.left].branchInvestment + refInfo[referrer.right].branchInvestment;
+            referrer.branchInvestment = referrer.totalPackageSize + refInfo[referrer.left][roundId].branchInvestment + refInfo[referrer.right][roundId].branchInvestment;
 
             // COMPARE WITH OPPOSITE TO UPDATE REFERRER'S PROFIT
             if (_address == referrer.left) { // check if currentAddress is left
                 if (referrer.right != address(0)) { // check if referrer have right else NOT RECEIVE COMMISSION PERCENTAGE
-                    Account storage right = refInfo[referrer.right]; // create right
+                    Account storage right = refInfo[referrer.right][roundId]; // create right
                     // EARN COMMISSION PERCENTAGE
                     if (currentAddress.branchInvestment > right.branchInvestment) { // check weak branch is right
                         // update totalCommisstionProfit
                         referrer.totalCommissionProfit = 
                         ((right.branchInvestment * referrer.commissionPercentage) / oneHundredPercent) +
-                        refInfo[referrer.right].totalCommissionProfit +
+                        refInfo[referrer.right][roundId].totalCommissionProfit +
                         currentAddress.totalCommissionProfit;
 
                         referrer.profit = ((right.currentPackageSize * directCommissionPercentage) / oneHundredPercent) + referrer.totalCommissionProfit - referrer.profitClaimed;
@@ -151,19 +151,19 @@ contract Ref is Ownable {
                         referrer.totalCommissionProfit = 
                         ((currentAddress.branchInvestment * referrer.commissionPercentage) / oneHundredPercent) +
                         currentAddress.totalCommissionProfit +
-                        refInfo[referrer.right].totalCommissionProfit;
+                        refInfo[referrer.right][roundId].totalCommissionProfit;
 
                         referrer.profit = ((currentAddress.currentPackageSize * directCommissionPercentage) / oneHundredPercent) + referrer.totalCommissionProfit - referrer.profitClaimed;
                     }
                 }
             } else { // check if currentAddress is right
-                Account storage left = refInfo[referrer.left]; // create left
+                Account storage left = refInfo[referrer.left][roundId]; // create left
                 // EARN COMMISSION PERCENTAGE
                 if (currentAddress.branchInvestment > left.branchInvestment) { // check weak branch is left
                     // update totalCommisstionProfit
                     referrer.totalCommissionProfit = 
                     ((left.branchInvestment * referrer.commissionPercentage) / oneHundredPercent) +
-                    refInfo[referrer.left].totalCommissionProfit +
+                    refInfo[referrer.left][roundId].totalCommissionProfit +
                     currentAddress.totalCommissionProfit;
 
                     referrer.profit = ((left.currentPackageSize * directCommissionPercentage) / oneHundredPercent) + referrer.totalCommissionProfit - referrer.profitClaimed;
@@ -172,7 +172,7 @@ contract Ref is Ownable {
                     referrer.totalCommissionProfit = 
                     ((currentAddress.branchInvestment * referrer.commissionPercentage) / oneHundredPercent) +
                     currentAddress.totalCommissionProfit +
-                    refInfo[referrer.left].totalCommissionProfit;
+                    refInfo[referrer.left][roundId].totalCommissionProfit;
 
                     referrer.profit = ((currentAddress.currentPackageSize * directCommissionPercentage) / oneHundredPercent) + referrer.totalCommissionProfit - referrer.profitClaimed;
                 }
@@ -180,11 +180,12 @@ contract Ref is Ownable {
             // set new address
             _address = currentAddress.ref;
             // condition to continue while loop => set currentAddress = it's ref
-            currentAddress = refInfo[currentAddress.ref];
+            currentAddress = refInfo[currentAddress.ref][roundId];
             countRefLevel++;
         }
         return countRefLevel;
     }
+}
 
     function _buy(
         address sender,

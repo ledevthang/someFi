@@ -8,18 +8,18 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract Wallet is Ownable {
     IERC20 token;
+    address usdtAddress;
 
     mapping(address => bool) isSupportToken;
     address[] listToken;
 
-    constructor(address[] memory _addressTokens){
-        require(_addressTokens.length > 0, "Invalid lenght");
-        for(uint i = 0; i < _addressTokens.length; i++){
-            address addressToken = _addressTokens[i];
-            require(addressToken != address(0), "Invalid address");
-            isSupportToken[addressToken] = true;
-            listToken.push(addressToken);
-        }
+    constructor( address _usdtAddress){
+        
+        require(_usdtAddress != address(0), "Invalid address");
+    
+        usdtAddress = _usdtAddress;
+        listToken.push(_usdtAddress);
+        isSupportToken[_usdtAddress] = true;
     }
 
     receive() external payable {}
@@ -54,9 +54,8 @@ contract Wallet is Ownable {
 
     }
     
-    
-    function approveUSDT(address _recipient,uint amount) external onlyOwner {
-        token = IERC20(usdtAddress);
+    function approveERCToken(address _token ,address _recipient,uint amount) external onlyOwner {
+        token = IERC20(_token);
         token.approve(_recipient, amount);
     }
 

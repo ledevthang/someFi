@@ -145,7 +145,7 @@ contract Ref is Ownable {
                         refInfo[referrer.right].totalCommissionProfit +
                         currentAddress.totalCommissionProfit;
 
-                        referrer.profit = ((right.branchInvestment * directCommissionPercentage) / oneHundredPercent) + referrer.totalCommissionProfit - referrer.profitClaimed;
+                        referrer.profit = ((right.currentPackageSize * directCommissionPercentage) / oneHundredPercent) + referrer.totalCommissionProfit - referrer.profitClaimed;
                     } else { // check weak branch is current
                         // update totalCommisstionProfit
                         referrer.totalCommissionProfit = 
@@ -153,7 +153,7 @@ contract Ref is Ownable {
                         currentAddress.totalCommissionProfit +
                         refInfo[referrer.right].totalCommissionProfit;
 
-                        referrer.profit = ((currentAddress.branchInvestment * directCommissionPercentage) / oneHundredPercent) + referrer.totalCommissionProfit - referrer.profitClaimed;
+                        referrer.profit = ((currentAddress.currentPackageSize * directCommissionPercentage) / oneHundredPercent) + referrer.totalCommissionProfit - referrer.profitClaimed;
                     }
                 }
             } else { // check if currentAddress is right
@@ -166,7 +166,7 @@ contract Ref is Ownable {
                     refInfo[referrer.left].totalCommissionProfit +
                     currentAddress.totalCommissionProfit;
 
-                    referrer.profit = ((left.branchInvestment * directCommissionPercentage) / oneHundredPercent) + referrer.totalCommissionProfit - referrer.profitClaimed;
+                    referrer.profit = ((left.currentPackageSize * directCommissionPercentage) / oneHundredPercent) + referrer.totalCommissionProfit - referrer.profitClaimed;
                 } else { // check weak branch is current
                     // update totalCommisstionProfit
                     referrer.totalCommissionProfit = 
@@ -174,7 +174,7 @@ contract Ref is Ownable {
                     currentAddress.totalCommissionProfit +
                     refInfo[referrer.left].totalCommissionProfit;
 
-                    referrer.profit = ((currentAddress.branchInvestment * directCommissionPercentage) / oneHundredPercent) + referrer.totalCommissionProfit - referrer.profitClaimed;
+                    referrer.profit = ((currentAddress.currentPackageSize * directCommissionPercentage) / oneHundredPercent) + referrer.totalCommissionProfit - referrer.profitClaimed;
                 }
             }
             // set new address

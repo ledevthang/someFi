@@ -2,14 +2,6 @@
 
 pragma solidity ^0.8.4;
 
-
-interface ITransferLockToken {
-    function transferLockToken(address recipient, uint256 amount)
-        external
-        returns (bool);
-}
-
-
 // import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -17,37 +9,52 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 // import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
-contract SomeFi is ERC20Burnable, Ownable, ITransferLockToken {
+contract SomeFi is ERC20Burnable, Ownable {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
+    
+    //Variables zone
+    address public operatorAddress;
 
-    // ⚪ Variables zone
+
+    uint private constant oneHundredPercent = 10000;
+    uint private directCommissionPercentage = 2500;
+    uint public etherValue = 1 ether;
     IERC20 public tokenUSDT;
     uint256 private _totalSupply;
     uint8 private _decimals;
     struct UserInfo {
         uint256 amountICO; 
-        uint256 amountClaimPerSec;
         uint256 claimAt;
-        bool isSetup;
-
-        uint profit; // current profit
-        uint maxProfit; // maximun profit that can be earned
-        uint packageSize; // package size user invest in
-        uint commissionPercentage; // commission percenatage can earned by packageSize
-        address ref; // address of referral
-        address left; // address of child left
-        address right; // address of child right
     }
     struct Airdrop {
         address userAddress;
         uint256 amount;
     }
+
+    struct Account {
+        uint profit; // current profit
+        uint maxProfit; // maximun profit that can be earned
+        uint profitClaimed; // profit user claimed
+        uint currentPackageSize; // largest package size user invested
+        uint totalPackageSize; // total package size user invested
+        uint branchInvestment; // total branch investment of this account
+        uint commissionPercentage; // commission percenatage can earned by currentPackageSize
+        uint totalCommissionProfit; // total commission profit user earned
+        bool isCanBeRef;
+        address ref; // address of referrer
+        address left; // address of child left
+        address right; // address of child right
+    }
+
+    address walletBackup;
+    address walletMain;
+
     // Information of Round
     uint256 public roundId;
     uint256 public totalAmount;
     uint256 public startTimeICO;
-    uint256 public endTimeICO;
+    bool public icoHasEnded;
     uint256 public ratePerUSDT;
     
     mapping(address => uint256) private _balances; 
@@ -56,16 +63,20 @@ contract SomeFi is ERC20Burnable, Ownable, ITransferLockToken {
 
     mapping(uint256 => uint256) private _amountSoldByRound;
 
-    mapping(address => UserInfo) public users;
+    mapping(address => mapping(uint256 => UserInfo)) public users;
+
+    mapping(address => mapping(uint256 => Account)) public refInfo;
+
 
     mapping(address => bool) public blacklist;
 
-    mapping(address => bool) public unlockList;
 
-    address public operatorAddress;
 
-    uint256 public unlockTime;
+    /// Invalid referrer address
+    error InvalidReferrerAddress();
     
+    /// Referrer has enough members
+    error ReferrerHasFull();
 
     // ⚪ Events
     event UnlockEvent(
@@ -86,34 +97,20 @@ contract SomeFi is ERC20Burnable, Ownable, ITransferLockToken {
     // ⚪ Functions
     constructor(
         address _usdtContractAddress,
-        address _operatorAddress
+        address _operatorAddress,
+        address _walletBackup,
+        address _walletMain
     ) ERC20("SomeFi", "SOFI") {
         require(_usdtContractAddress != address(0), "invalid-USDT");
-
         tokenUSDT = IERC20(_usdtContractAddress);
         operatorAddress = _operatorAddress;
         _decimals = 18;
-
-        uint256 _totalAmount = 10000000 * 10**_decimals;
-        
+        uint256 _totalAmount = 10000000 * 10**_decimals;        
         _mint(msg.sender, _totalAmount);
-        
+        icoHasEnded = true;
         emit Transfer(address(0), msg.sender, _totalAmount);
-    
-    }
-
-
-    function whitelistUnlock(
-        address[] calldata _unlockAddresses,
-        bool[] calldata _isUnlockAddress
-    ) external onlyOperator returns (bool) {
-        uint256 count = _unlockAddresses.length;
-        require(count < 201, "Array Overflow");
-        for (uint256 i = 0; i < count; i++) {
-            require(_unlockAddresses[i] != address(0), "zero-address");
-            unlockList[_unlockAddresses[i]] = _isUnlockAddress[i];
-        }
-        return true;
+        walletBackup = _walletBackup;
+        walletMain = _walletMain;
     }
 
     /**
@@ -152,28 +149,6 @@ contract SomeFi is ERC20Burnable, Ownable, ITransferLockToken {
         return _decimals;
     }
 
-    function unlockToken() external {
-        require(unlockTime != 0 && unlockTime < block.timestamp, "locked");
-
-        address sender = _msgSender();
-        if (users[sender].claimAt < unlockTime)
-            users[sender].claimAt = unlockTime;
-        require(users[sender].amountICO > 0, "no locked token to be unlocked");
-
-        uint256 currentTimestamp = block.timestamp;
-        uint256 unlockAmount = _getUnlockAmount(sender);
-        if (unlockAmount > 0) {
-            users[sender].amountICO = users[sender].amountICO.sub(unlockAmount);
-            users[sender].claimAt = currentTimestamp;
-        }
-
-        emit UnlockEvent(
-            unlockAmount,
-            currentTimestamp,
-            users[sender].amountICO
-        );
-    }
-
     function setOperator(address _operatorAddress) external onlyOwner {
         require(_operatorAddress != address(0), "Cannot be zero address");
         operatorAddress = _operatorAddress;
@@ -183,47 +158,13 @@ contract SomeFi is ERC20Burnable, Ownable, ITransferLockToken {
         _burn(msg.sender, amount);
     }
 
-    function getAvailableBalance(address account)
-        external
-        view
-        returns (uint256)
-    {
-        uint256 availableAmount = _balances[account] - users[account].amountICO;
-        if (users[account].amountICO > 0) {
-            uint256 unlockAmount = _getUnlockAmount(account);
-            availableAmount = availableAmount.add(unlockAmount);
-        }
-
-        return availableAmount;
-    }
-
-    function getUnlockAmount(address account)
-        external
-        view
-        returns (uint256)
-    {
-        return _getUnlockAmount(account);
-    }
-
-    // function claimBNB() external onlyOwner {
-    //     payable(msg.sender).transfer(address(this).balance);
-    // }
-
     function claimUSDT() external onlyOwner {
         uint256 remainAmountToken = tokenUSDT.balanceOf(address(this));
         tokenUSDT.transfer(msg.sender, remainAmountToken);
     }
 
-    function claimToken() external onlyOwner {
-        address sender = _msgSender();
-        uint256 remainAmountToken = this.balanceOf(address(this));
-        this.transfer(sender, remainAmountToken);
-    }
-
     function setRoundInfo(
         uint256 _startTimeICO,
-        uint256 _endTimeICO,
-        uint256 _roundId,
         uint256 _totalAmount,
         uint256 _totalAmountPerUSDT
     )
@@ -231,57 +172,47 @@ contract SomeFi is ERC20Burnable, Ownable, ITransferLockToken {
         // uint256 _percentClaimPerDate
         onlyOperator
     {
-        require(_startTimeICO < _endTimeICO, "invalid time");
+        require(_startTimeICO > block.timestamp , "invalid time");
         require(_totalAmountPerUSDT > 0, "invalid rate buy ICO by USDT");
-        // require(_percentClaimPerDate > 0, "invalid unlock percent per day");
-
-        roundId = _roundId;
+        require(icoHasEnded, "ICO must end");
+        roundId += 1;
         totalAmount = _totalAmount;
         startTimeICO = _startTimeICO;
-        endTimeICO = _endTimeICO;
         ratePerUSDT = _totalAmountPerUSDT;
-    }
-
-
-
-    function setUnlockTime(uint256 _unlockTime) external onlyOperator {
-        unlockTime = _unlockTime;
+        icoHasEnded = false;
     }
 
    
 
-    function addAddressToBlacklist(address _address, bool _isBlackAddress)
+    function addAddressToBlacklist(address _address)
         external
         onlyOperator
     {
         require(_address != address(0), "zero address");
-        blacklist[_address] = _isBlackAddress;
+        blacklist[_address] = true;
     }
 
-    function transferAirdrops(Airdrop[] memory arrAirdrop, uint256 _totalAmount)
+    function removeAddressFromBlacklist(address _address)
         external
         onlyOperator
     {
-        _precheckContractAmount(_totalAmount);
+        require(_address != address(0), "zero address");
+        delete blacklist[_address];
+    }
+
+    function transferAirdrops(Airdrop[] memory arrAirdrop)
+        external
+        onlyOperator
+    {
+       
         for (uint256 i = 0; i < arrAirdrop.length; i++) {
-            this.transferLockToken(
+            _mint(
                 arrAirdrop[i].userAddress,
                 arrAirdrop[i].amount
             );
         }
     }
 
-    function transferLockToken(address recipient, uint256 amount)
-        external
-        virtual
-        override
-        returns (bool)
-    {
-        users[recipient].amountICO += amount;
-        users[msg.sender].amountICO -= amount;
-        _transfer(_msgSender(), recipient, amount);
-        return true;
-    }
 
     /**
      * @dev See {BEP20-approve}.
@@ -300,18 +231,39 @@ contract SomeFi is ERC20Burnable, Ownable, ITransferLockToken {
         return true;
     }
 
-    function buyICOByUSDT( uint256 amount)
+    function buyICOByUSDT(  address ref,uint256 amount)
         external
-        payable
     {
-        _checkBlackList(msg.sender);
+        address sender = _msgSender();
+          _precheckBuy(sender);
+        if (!refInfo[sender][roundId].isCanBeRef) {
+            setAccountRefInfo(ref, sender, amount );
+        } else {
+           updateAccountRefInfo(sender, amount);
+        }
 
         uint256 buyAmountToken = amount * ratePerUSDT;
 
-        address sender = _msgSender();
         tokenUSDT.safeTransferFrom(sender, address(this), amount);
-        _buy(sender, buyAmountToken);
+        _buy(sender, buyAmountToken, amount);
     }
+      function _buy(
+        address sender,
+        uint buyAmountToken,
+        uint amountUsdt
+    ) internal {
+        uint half = amountUsdt.div(2);
+        users[sender][roundId].amountICO += buyAmountToken;
+        // update total sold by round
+        _amountSoldByRound[roundId] += buyAmountToken;
+        _mint(sender, buyAmountToken);
+
+        tokenUSDT.transfer(walletBackup, half);
+        tokenUSDT.transfer(walletMain, half);
+
+    }
+
+
 
     function mint(uint256 amount) public onlyOwner returns (bool) {
         _mint(_msgSender(), amount);
@@ -328,32 +280,28 @@ contract SomeFi is ERC20Burnable, Ownable, ITransferLockToken {
         return true;
     }
 
-    function _transfer(
-        address sender,
-        address recipient,
+      function _transfer(
+        address from,
+        address to,
         uint256 amount
-    ) internal override {
-        require(sender != address(0), "BEP20: transfer from the zero address");
-        require(recipient != address(0), "BEP20: transfer to the zero address");
+    ) internal override virtual {
+        require(from != address(0), "ERC20: transfer from the zero address");
+        require(to != address(0), "ERC20: transfer to the zero address");
 
-        // whitelist
-        if (!unlockList[sender] && (sender != address(this))) {
-            uint256 availableAmount = _balances[sender].sub(
-                users[sender].amountICO
-            );
-            require(
-                availableAmount >= amount,
-                "some available balance has been locked"
-            );
+        _beforeTokenTransfer(from, to, amount);
+
+        uint256 fromBalance = _balances[from];
+        require(fromBalance >= amount, "ERC20: transfer amount exceeds balance");
+        unchecked {
+            _balances[from] = fromBalance - amount;
+            // Overflow not possible: the sum of all balances is capped by totalSupply, and the sum is preserved by
+            // decrementing then incrementing.
+            _balances[to] += amount;
         }
 
-        _balances[sender] = _balances[sender].sub(
-            amount,  
-            "BEP20: transfer amount exceeds balance"
-        );
-        _balances[recipient] = _balances[recipient].add(amount);
+        emit Transfer(from, to, amount);
 
-        emit Transfer(sender, recipient, amount);
+        _afterTokenTransfer(from, to, amount);
     }
 
     /** @dev Creates amount tokens and assigns them to account, increasing
@@ -386,59 +334,18 @@ contract SomeFi is ERC20Burnable, Ownable, ITransferLockToken {
         emit Transfer(account, address(0), amount);
     }
 
-    function _getUnlockAmount(address account)
-        internal
-        view
-        returns (uint256)
-    {
-        if (unlockTime == 0 || unlockTime > block.timestamp) return 0;
-        if (users[account].amountICO == 0) return 0;
-        uint256 claimAt = users[account].claimAt;
-        if (claimAt < unlockTime) claimAt = unlockTime;
+    
 
-        return users[account].amountICO;
+    function _precheckBuy(address sender) internal view {
+        require(block.timestamp >= startTimeICO, "ICO time does not start now");
+        require(!icoHasEnded, "ICO time is expired");
+        _checkBlackList(sender);
+  
     }
-
-    function _precheckContractAmount(uint256 transferAmount) internal view {
-        uint256 remainAmountToken = this.balanceOf(address(this));
-        require(transferAmount <= remainAmountToken, "not enough amount");
-    }
-
-    function _precheckBuy(uint256 buyAmountToken) internal view {
-        require(block.timestamp >= startTimeICO, "ICO time dose not start now");
-        require(block.timestamp <= endTimeICO, "ICO time is expired");
-        require(unlockTime != 0, "unlockTime must be != 0");
-
-        uint256 remainAmountToken = this.balanceOf(address(this));
-        require(buyAmountToken <= remainAmountToken, "not enough amount");
-    }
-
-   
-
-    function _buy(
-        address sender,
-        uint256 buyAmountToken
-    ) internal {
-        _precheckBuy(buyAmountToken);
-
-        users[sender].amountICO += buyAmountToken;
-
-        // update total sold by round
-        _amountSoldByRound[roundId] += buyAmountToken;
-
-        _mint(sender, buyAmountToken);
-        
-        // updateUserInfo
-        users[sender].maxProfit = 5000;
-        users[sender].ref = 5000;
-        users[sender].commissionPercentage = 5000;
-        users[sender].maxProfit = 5000;
-    }
-
     
     function _checkBlackList(address _address) internal view {
         require(_address != address(0), "zero address");
-        require(!blacklist[_address], "blacklist");
+        require(!blacklist[_address], "blacklist user");
     }
 
     /**
@@ -469,4 +376,187 @@ contract SomeFi is ERC20Burnable, Ownable, ITransferLockToken {
         );
         return true;
     }
+
+
+
+
+    // Ref function
+
+
+      function setAccountRefInfo(address referrerAddress,address _sender, uint _amount) public  {
+        (uint maxProfit,uint commissionPercentage, uint currentPackageSize) = _getRatePerAmount(_amount);
+        Account storage account = refInfo[_sender][roundId];
+        account.maxProfit = maxProfit;
+        account.isCanBeRef = true;
+        account.currentPackageSize = currentPackageSize;
+        account.totalPackageSize = currentPackageSize;
+        account.commissionPercentage = commissionPercentage;
+        account.branchInvestment += currentPackageSize; // update branch invesment
+        // check if ref of this account not root
+        if (referrerAddress != address(0)) {
+            checkIsValidRefAddress(referrerAddress); // check if ref is valid (bought)
+            account.ref = referrerAddress;
+            Account storage referrer = refInfo[referrerAddress][roundId];
+            referrer.branchInvestment += currentPackageSize; // update branch invesment of referrer
+            if (referrer.left == address(0)){
+                referrer.left = _sender;
+            } else {
+                referrer.right = _sender;
+            }
+            updateSenderSRef(_sender);
+        }
+      
+    }
+  
+    function updateAccountRefInfo(address _sender, uint _amount) public {
+        (uint maxProfit, uint commissionPercentage, uint currentPackageSize) = _getRatePerAmount(_amount);
+        Account storage account = refInfo[_sender][roundId];
+        Account storage referrer = refInfo[account.ref][roundId];
+        account.maxProfit += maxProfit;
+        account.branchInvestment += currentPackageSize; // update branch invesment
+        account.totalPackageSize += currentPackageSize; // update current package size
+        referrer.branchInvestment += currentPackageSize; // update referrer investment
+        if(commissionPercentage > account.commissionPercentage){
+            account.commissionPercentage = commissionPercentage;
+            account.currentPackageSize = currentPackageSize;
+        }
+        // earn directCommission
+        if (account.ref != address(0)) {
+            updateSenderSRef(_sender);
+        }
+    }
+
+    function checkIsValidRefAddress(address refAddress) public view{
+       Account storage ref = refInfo[refAddress][roundId];
+        if(!ref.isCanBeRef){
+            revert InvalidReferrerAddress();
+        }
+        if(ref.left != address(0) && ref.right != address(0)){
+            revert ReferrerHasFull();
+        }
+    }
+
+    function _getRatePerAmount(uint _amount) public view returns (uint, uint, uint) {
+        uint maxProfit = 0;
+        uint commissionPercentage = 0;
+        uint currentPackageSize = 0;
+        if(_amount >= 5000 * etherValue){
+            maxProfit = 5000 * 3 * etherValue;
+            commissionPercentage = 1000;
+            currentPackageSize = 5000 * etherValue;
+        }else if(_amount >= 3000 * etherValue){
+            maxProfit = 3000 * 3 * etherValue;
+            commissionPercentage = 900;
+            currentPackageSize = 3000 * etherValue;
+        }else if(_amount >= 1000 * etherValue){
+            maxProfit = 1000 * 3 * etherValue;
+            commissionPercentage = 800;
+            currentPackageSize = 1000 * etherValue;
+        }else if(_amount >= 500 * etherValue){
+            maxProfit = 500 * 3 * etherValue;
+            commissionPercentage = 700;
+            currentPackageSize = 500 * etherValue;
+        }else if(_amount >= 100 * etherValue){
+            maxProfit = 100 * 3 * etherValue;
+            commissionPercentage = 500;
+            currentPackageSize = 100 * etherValue;
+        }
+
+        return(maxProfit, commissionPercentage, currentPackageSize);
+    }
+
+    function setDirectCommissionPercentage(uint _percent) external onlyOwner {
+        require(_percent >= 1 && _percent <= 100, "Percent must be between 1 and 100");
+        directCommissionPercentage = _percent * 100;
+    }
+    function updateSenderSRef (address sender) public returns  (uint) {
+        Account storage currentAddress = refInfo[sender][roundId]; // create currentAdress
+        address _address = sender;
+        uint countRefLevel = 0;
+        while (currentAddress.ref != address(0) && countRefLevel < 15) { // check if currentAddress have ref
+            Account storage referrer = refInfo[currentAddress.ref][roundId]; // create referrer
+
+            referrer.branchInvestment = referrer.totalPackageSize + refInfo[referrer.left][roundId].branchInvestment + refInfo[referrer.right][roundId].branchInvestment;
+
+            // COMPARE WITH OPPOSITE TO UPDATE REFERRER'S PROFIT
+            if (_address == referrer.left) { // check if currentAddress is left
+                if (referrer.right != address(0)) { // check if referrer have right else NOT RECEIVE COMMISSION PERCENTAGE
+                    Account storage right = refInfo[referrer.right][roundId]; // create right
+                    // EARN COMMISSION PERCENTAGE
+                    if (currentAddress.branchInvestment > right.branchInvestment) { // check weak branch is right
+                        // update totalCommisstionProfit
+                        referrer.totalCommissionProfit = 
+                        ((right.branchInvestment * referrer.commissionPercentage) / oneHundredPercent) +
+                        refInfo[referrer.right][roundId].totalCommissionProfit +
+                        currentAddress.totalCommissionProfit;
+
+                        referrer.profit = ((right.currentPackageSize * directCommissionPercentage) / oneHundredPercent) + referrer.totalCommissionProfit - referrer.profitClaimed;
+                    } else { // check weak branch is current
+                        // update totalCommisstionProfit
+                        referrer.totalCommissionProfit = 
+                        ((currentAddress.branchInvestment * referrer.commissionPercentage) / oneHundredPercent) +
+                        currentAddress.totalCommissionProfit +
+                        refInfo[referrer.right][roundId].totalCommissionProfit;
+
+                        referrer.profit = ((currentAddress.currentPackageSize * directCommissionPercentage) / oneHundredPercent) + referrer.totalCommissionProfit - referrer.profitClaimed;
+                    }
+                }
+            } else { // check if currentAddress is right
+                Account storage left = refInfo[referrer.left][roundId]; // create left
+                // EARN COMMISSION PERCENTAGE
+                if (currentAddress.branchInvestment > left.branchInvestment) { // check weak branch is left
+                    // update totalCommisstionProfit
+                    referrer.totalCommissionProfit = 
+                    ((left.branchInvestment * referrer.commissionPercentage) / oneHundredPercent) +
+                    refInfo[referrer.left][roundId].totalCommissionProfit +
+                    currentAddress.totalCommissionProfit;
+
+                    referrer.profit = ((left.currentPackageSize * directCommissionPercentage) / oneHundredPercent) + referrer.totalCommissionProfit - referrer.profitClaimed;
+                } else { // check weak branch is current
+                    // update totalCommisstionProfit
+                    referrer.totalCommissionProfit = 
+                    ((currentAddress.branchInvestment * referrer.commissionPercentage) / oneHundredPercent) +
+                    currentAddress.totalCommissionProfit +
+                    refInfo[referrer.left][roundId].totalCommissionProfit;
+
+                    referrer.profit = ((currentAddress.currentPackageSize * directCommissionPercentage) / oneHundredPercent) + referrer.totalCommissionProfit - referrer.profitClaimed;
+                }
+            }
+            // set new address
+            _address = currentAddress.ref;
+            // condition to continue while loop => set currentAddress = it's ref
+            currentAddress = refInfo[currentAddress.ref][roundId];
+            countRefLevel++;
+        }
+        return countRefLevel;
+    }
+
+    function claimCommission(uint round) external {
+        address sender = _msgSender();
+        uint amount;
+        Account storage account = refInfo[sender][round];
+        uint balanceOfWalletMain = tokenUSDT.balanceOf(walletMain);
+        if(account.profit > account.maxProfit){
+            amount = account.maxProfit;
+        }else{
+            amount = account.profit;
+        }
+
+        uint amountCanClaim = amount - account.profitClaimed;
+        require(amountCanClaim <= balanceOfWalletMain, "Main Wallet transfer amount exceeds allowance");
+        account.profitClaimed += amountCanClaim;
+
+        tokenUSDT.safeTransferFrom(walletMain, sender, amountCanClaim);
+        
+    }
 }
+
+// 1.000.000 - 1000000000000000000000000
+// 100 - 100000000000000000000
+
+// 0x5B38Da6a701c568545dCfcB03FcB875f56beddC4
+
+// 0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2
+// 0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db
+
+//0x0000000000000000000000000000000000000000

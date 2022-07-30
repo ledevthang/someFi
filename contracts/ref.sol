@@ -185,18 +185,15 @@ contract Ref is Ownable {
         }
         return countRefLevel;
     }
-}
-
     function _buy(
         address sender,
         address ref,
         uint256 amount
     ) public {
-        if (!refInfo[sender].isCanBeRef) {
+        if (!refInfo[sender][roundId].isCanBeRef) {
             setAccountRefInfo(ref, sender, amount );
         } else {
            updateAccountRefInfo(sender, amount);
         }
     }
-
 }

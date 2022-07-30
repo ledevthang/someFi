@@ -1,26 +1,19 @@
-// SPDX-License-Identifier: UNLICENSED
-
+//SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-// import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-// import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
 
-contract SomeFi is ERC20Burnable, Ownable {
-    using SafeERC20 for IERC20;
-    using SafeMath for uint256;
+contract SomeFi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,OwnableUpgradeable {
     
-    //Variables zone
     address public operatorAddress;
 
-
-    uint private constant oneHundredPercent = 10000;
-    uint private directCommissionPercentage = 2500;
-    uint public etherValue = 1 ether;
-    IERC20 public tokenUSDT;
+    uint private oneHundredPercent;
+    uint private directCommissionPercentage;
+    uint public etherValue;
+    IERC20Upgradeable public tokenUSDT;
     uint256 private _totalSupply;
     uint8 private _decimals;
     struct UserInfo {
@@ -71,6 +64,23 @@ contract SomeFi is ERC20Burnable, Ownable {
     mapping(address => bool) public blacklist;
 
 
+    function initialize( address _usdtContractAddress,
+        address _operatorAddress,
+        address _walletBackup,
+        address _walletMain) external initializer {
+        require(_usdtContractAddress != address(0), "invalid-USDT");
+         __ERC20_init("SomeFi","SOFI");
+        __Ownable_init();
+        _mint(msg.sender, 10000000000000000000000000);
+        tokenUSDT =  IERC20Upgradeable(_usdtContractAddress);
+        operatorAddress = _operatorAddress;      
+        icoHasEnded = true;
+        walletBackup = _walletBackup;
+        walletMain = _walletMain;
+        oneHundredPercent = 10000;
+        directCommissionPercentage = 2500;
+        etherValue = 1 ether;
+    }
 
     /// Invalid referrer address
     error InvalidReferrerAddress();
@@ -78,14 +88,7 @@ contract SomeFi is ERC20Burnable, Ownable {
     /// Referrer has enough members
     error ReferrerHasFull();
 
-    // ⚪ Events
-    event UnlockEvent(
-        uint256 unlockAmount,
-        uint256 currentTimestamp,
-        uint256 lockAmount
-    );
-
-    event UpdatedUserLastActiveTime(address user, uint256 timestamp);
+    event buyIco(address buyer, uint amount);
 
     // ⚪ Modifiers
     modifier onlyOperator() {
@@ -94,76 +97,64 @@ contract SomeFi is ERC20Burnable, Ownable {
         
     }
 
-    // ⚪ Functions
-    constructor(
-        address _usdtContractAddress,
-        address _operatorAddress,
-        address _walletBackup,
-        address _walletMain
-    ) ERC20("SomeFi", "SOFI") {
-        require(_usdtContractAddress != address(0), "invalid-USDT");
-        tokenUSDT = IERC20(_usdtContractAddress);
-        operatorAddress = _operatorAddress;
-        _decimals = 18;
-        uint256 _totalAmount = 10000000 * 10**_decimals;        
-        _mint(msg.sender, _totalAmount);
-        icoHasEnded = true;
-        emit Transfer(address(0), msg.sender, _totalAmount);
-        walletBackup = _walletBackup;
-        walletMain = _walletMain;
-    }
-
-    /**
-     * @dev Gets amount sold by round
-     */
-    function getSoldbyRound(uint256 _roundId) public view returns (uint256) {
-        return _amountSoldByRound[_roundId];
-    }
-
-    /**
-     * @dev Returns the bep token owner.
-     */
-    function getOwner() external view virtual returns (address) {
-        return owner();
-    }
-
-    function totalSupply() public view virtual override returns (uint256) {
-        return _totalSupply;
-        // return 1000000 * 10**18;
-    }
-
-    /**
-     * @dev See {BEP20-balanceOf}.
-     */
-    function balanceOf(address account)
-        public
-        view
-        virtual
-        override
-        returns (uint256)
+    function buyICOByUSDT(  address ref,uint256 amount)
+        external
     {
-        return _balances[account];
+        address sender = _msgSender();
+          _precheckBuy(sender);
+        if (!refInfo[sender][roundId].isCanBeRef) {
+            setAccountRefInfo(ref, sender, amount );
+        } else {
+           updateAccountRefInfo(sender, amount);
+        }
+
+        uint256 buyAmountToken = amount * ratePerUSDT;
+
+        tokenUSDT.transferFrom(sender, address(this), amount);
+        _buy(sender, buyAmountToken, amount);
+        emit buyIco(sender, amount);
     }
 
-    function decimals() public view override returns (uint8) {
-        return _decimals;
+      function _buy(
+        address sender,
+        uint buyAmountToken,
+        uint amountUsdt
+    ) internal {
+        uint half = amountUsdt / 2;
+        users[sender][roundId].amountICO += buyAmountToken;
+        // update total sold by round
+        _amountSoldByRound[roundId] += buyAmountToken;
+        _mint(sender, buyAmountToken);
+
+        tokenUSDT.transfer(walletBackup, half);
+        tokenUSDT.transfer(walletMain, half);
+
     }
 
-    function setOperator(address _operatorAddress) external onlyOwner {
+        function _precheckBuy(address sender) internal view {
+        require(block.timestamp >= startTimeICO, "ICO time does not start now");
+        require(!icoHasEnded, "ICO time is expired");
+        _checkBlackList(sender);
+  
+    }
+    
+    function _checkBlackList(address _address) internal view {
+        require(_address != address(0), "zero address");
+        require(!blacklist[_address], "blacklist user");
+    }
+
+
+    function mint(address to, uint amount) external onlyOwner {
+        _mint(to, amount);
+    }
+
+    //setter
+        function setOperator(address _operatorAddress) external onlyOwner {
         require(_operatorAddress != address(0), "Cannot be zero address");
         operatorAddress = _operatorAddress;
     }
 
-    function burn(uint256 amount) public override {
-        _burn(msg.sender, amount);
-    }
-
-    function claimUSDT() external onlyOwner {
-        uint256 remainAmountToken = tokenUSDT.balanceOf(address(this));
-        tokenUSDT.transfer(msg.sender, remainAmountToken);
-    }
-
-    function setRoundInfo(
+     function setRoundInfo(
         uint256 _startTimeICO,
         uint256 _totalAmount,
         uint256 _totalAmountPerUSDT
@@ -182,9 +173,7 @@ contract SomeFi is ERC20Burnable, Ownable {
         icoHasEnded = false;
     }
 
-   
-
-    function addAddressToBlacklist(address _address)
+      function addAddressToBlacklist(address _address)
         external
         onlyOperator
     {
@@ -200,7 +189,18 @@ contract SomeFi is ERC20Burnable, Ownable {
         delete blacklist[_address];
     }
 
-    function transferAirdrops(Airdrop[] memory arrAirdrop)
+    // getter
+      function getSoldbyRound(uint256 _roundId) public view returns (uint256) {
+        return _amountSoldByRound[_roundId];
+    }
+
+    // 
+        function claimUSDT() external onlyOwner {
+        uint256 remainAmountToken = tokenUSDT.balanceOf(address(this));
+        tokenUSDT.transfer(msg.sender, remainAmountToken);
+    }
+
+      function transferAirdrops(Airdrop[] memory arrAirdrop)
         external
         onlyOperator
     {
@@ -213,176 +213,8 @@ contract SomeFi is ERC20Burnable, Ownable {
         }
     }
 
-
-    /**
-     * @dev See {BEP20-approve}.
-     *
-     * Requirements:
-     *
-     * - spender cannot be the zero address.
-     */
-    function approve(address spender, uint256 amount)
-        public
-        virtual
-        override
-        returns (bool)
-    {
-        _approve(_msgSender(), spender, amount);
-        return true;
-    }
-
-    function buyICOByUSDT(  address ref,uint256 amount)
-        external
-    {
-        address sender = _msgSender();
-          _precheckBuy(sender);
-        if (!refInfo[sender][roundId].isCanBeRef) {
-            setAccountRefInfo(ref, sender, amount );
-        } else {
-           updateAccountRefInfo(sender, amount);
-        }
-
-        uint256 buyAmountToken = amount * ratePerUSDT;
-
-        tokenUSDT.safeTransferFrom(sender, address(this), amount);
-        _buy(sender, buyAmountToken, amount);
-    }
-      function _buy(
-        address sender,
-        uint buyAmountToken,
-        uint amountUsdt
-    ) internal {
-        uint half = amountUsdt.div(2);
-        users[sender][roundId].amountICO += buyAmountToken;
-        // update total sold by round
-        _amountSoldByRound[roundId] += buyAmountToken;
-        _mint(sender, buyAmountToken);
-
-        tokenUSDT.transfer(walletBackup, half);
-        tokenUSDT.transfer(walletMain, half);
-
-    }
-
-
-
-    function mint(uint256 amount) public onlyOwner returns (bool) {
-        _mint(_msgSender(), amount);
-        return true;
-    }
-
-    function transfer(address recipient, uint256 amount)
-        public
-        virtual
-        override
-        returns (bool)
-    {
-        _transfer(_msgSender(), recipient, amount);
-        return true;
-    }
-
-      function _transfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal override virtual {
-        require(from != address(0), "ERC20: transfer from the zero address");
-        require(to != address(0), "ERC20: transfer to the zero address");
-
-        _beforeTokenTransfer(from, to, amount);
-
-        uint256 fromBalance = _balances[from];
-        require(fromBalance >= amount, "ERC20: transfer amount exceeds balance");
-        unchecked {
-            _balances[from] = fromBalance - amount;
-            // Overflow not possible: the sum of all balances is capped by totalSupply, and the sum is preserved by
-            // decrementing then incrementing.
-            _balances[to] += amount;
-        }
-
-        emit Transfer(from, to, amount);
-
-        _afterTokenTransfer(from, to, amount);
-    }
-
-    /** @dev Creates amount tokens and assigns them to account, increasing
-     * the total supply.
-     *
-     * Emits a {Transfer} event with from set to the zero address.
-     *
-     * Requirements
-     *
-     * - to cannot be the zero address.
-     */
-     
+    // ref zone
     
-    function _mint(address account, uint256 amount) internal override {
-        require(account != address(0), "BEP20: mint to the zero address");
-
-        _totalSupply = _totalSupply.add(amount);
-        _balances[account] = _balances[account].add(amount);
-        emit Transfer(address(0), account, amount);
-    }
-
-    function _burn(address account, uint256 amount) internal override {
-        require(account != address(0), "BEP20: burn from the zero address");
-
-        _balances[account] = _balances[account].sub(
-            amount,
-            "BEP20: burn amount exceeds balance"
-        );
-        _totalSupply = _totalSupply.sub(amount);
-        emit Transfer(account, address(0), amount);
-    }
-
-    
-
-    function _precheckBuy(address sender) internal view {
-        require(block.timestamp >= startTimeICO, "ICO time does not start now");
-        require(!icoHasEnded, "ICO time is expired");
-        _checkBlackList(sender);
-  
-    }
-    
-    function _checkBlackList(address _address) internal view {
-        require(_address != address(0), "zero address");
-        require(!blacklist[_address], "blacklist user");
-    }
-
-    /**
-     * @dev See {BEP20-transferFrom}.
-     *
-     * Emits an {Approval} event indicating the updated allowance. This is not
-     * required by the EIP. See the note at the beginning of {BEP20};
-     *
-     * Requirements:
-     * - sender and recipient cannot be the zero address.
-     * - sender must have a balance of at least amount.
-     * - the caller must have allowance for sender's tokens of at least
-     * amount.
-     */
-    function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) public virtual override returns (bool) {
-        _transfer(sender, recipient, amount);
-        _approve(
-            sender,
-            _msgSender(),
-            _allowances[sender][_msgSender()].sub(
-                amount,
-                "BEP20: transfer amount exceeds allowance"
-            )
-        );
-        return true;
-    }
-
-
-
-
-    // Ref function
-
-
       function setAccountRefInfo(address referrerAddress,address _sender, uint _amount) public  {
         (uint maxProfit,uint commissionPercentage, uint currentPackageSize) = _getRatePerAmount(_amount);
         Account storage account = refInfo[_sender][roundId];
@@ -546,17 +378,8 @@ contract SomeFi is ERC20Burnable, Ownable {
         require(amountCanClaim <= balanceOfWalletMain, "Main Wallet transfer amount exceeds allowance");
         account.profitClaimed += amountCanClaim;
 
-        tokenUSDT.safeTransferFrom(walletMain, sender, amountCanClaim);
+        tokenUSDT.transferFrom(walletMain, sender, amountCanClaim);
         
     }
+
 }
-
-// 1.000.000 - 1000000000000000000000000
-// 100 - 100000000000000000000
-
-// 0x5B38Da6a701c568545dCfcB03FcB875f56beddC4
-
-// 0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2
-// 0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db
-
-//0x0000000000000000000000000000000000000000

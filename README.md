@@ -10,4 +10,5 @@ npx hardhat test
 GAS_REPORT=true npx hardhat test
 npx hardhat node
 npx hardhat run scripts/deploy.js
+npx hardhat run scripts/upgrade_box_v2.js --network bnbTest
 ```

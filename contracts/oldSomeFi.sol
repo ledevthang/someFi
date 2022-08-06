@@ -1,23 +1,25 @@
-//SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
+
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
+// import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-contract SomeFiV2 is
-    Initializable,
-    ERC20Upgradeable,
-    ERC20BurnableUpgradeable,
-    OwnableUpgradeable
-{
+// import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+
+contract SomeFi is ERC20Burnable, Ownable {
+    using SafeERC20 for IERC20;
+    using SafeMath for uint256;
+
     // address public operatorAddress;
 
-    uint256 private oneHundredPercent;
-    uint256 private directCommissionPercentage;
-    uint256 public etherValue;
-    IERC20Upgradeable public tokenUSDT;
+    uint256 private oneHundredPercent = 10000;
+    uint256 private directCommissionPercentage = 2500;
+    uint256 public etherValue = 1 ether;
+    IERC20 public tokenUSDT;
     uint256 private _totalSupply;
     uint8 private _decimals;
     struct UserInfo {
@@ -61,6 +63,8 @@ contract SomeFiV2 is
 
     mapping(address => mapping(uint256 => Account)) public refInfo;
 
+    mapping(address => mapping(address => uint256)) private _allowances;
+
     mapping(address => bool) private operator;
 
     mapping(address => bool) public blacklist;
@@ -71,9 +75,6 @@ contract SomeFiV2 is
     /// Referrer has enough members
     error ReferrerHasFull();
 
-    /// This branch already has enough members
-    error ReferrerHasFullThisBranch();
-
     event buyIco(address buyer, uint256 amount);
 
     // ⚪ Modifiers
@@ -82,15 +83,29 @@ contract SomeFiV2 is
         _;
     }
 
-    function buyICOByUSDT(
-        address ref,
-        bool isLeft,
-        uint256 amount
-    ) external {
+    constructor(
+        address _usdtContractAddress,
+        address _operatorAddress,
+        address _walletBackup,
+        address _walletMain
+    ) ERC20("SomeFi", "SOFI") {
+        require(_usdtContractAddress != address(0), "invalid-USDT");
+        tokenUSDT = IERC20(_usdtContractAddress);
+        operator[_operatorAddress] = true;
+        _decimals = 18;
+        uint256 _totalAmount = 10000000 * 10**_decimals;
+        _mint(msg.sender, _totalAmount);
+        icoHasEnded = true;
+        emit Transfer(address(0), msg.sender, _totalAmount);
+        backupWallet = _walletBackup;
+        mainWallet = _walletMain;
+    }
+
+    function buyICOByUSDT(address ref, uint256 amount) external {
         address sender = _msgSender();
         _precheckBuy(sender);
         if (!refInfo[sender][roundId].isCanBeRef) {
-            setAccountRefInfo(sender, ref, isLeft, amount);
+            setAccountRefInfo(ref, sender, amount);
         } else {
             updateAccountRefInfo(sender, amount);
         }
@@ -100,6 +115,89 @@ contract SomeFiV2 is
         tokenUSDT.transferFrom(sender, address(this), amount);
         _buy(sender, buyAmountToken, amount);
         emit buyIco(sender, amount);
+    }
+
+    /**
+     * @dev Returns the bep token owner.
+     */
+    function getOwner() external view virtual returns (address) {
+        return owner();
+    }
+
+    function totalSupply() public view virtual override returns (uint256) {
+        return _totalSupply;
+        // return 1000000 * 10**18;
+    }
+
+    /**
+     * @dev See {BEP20-balanceOf}.
+     */
+    function balanceOf(address account)
+        public
+        view
+        virtual
+        override
+        returns (uint256)
+    {
+        return _balances[account];
+    }
+
+    function decimals() public view override returns (uint8) {
+        return _decimals;
+    }
+
+    /**
+     * @dev See {BEP20-approve}.
+     *
+     * Requirements:
+     *
+     * - spender cannot be the zero address.
+     */
+    function approve(address spender, uint256 amount)
+        public
+        virtual
+        override
+        returns (bool)
+    {
+        _approve(_msgSender(), spender, amount);
+        return true;
+    }
+
+    function transfer(address recipient, uint256 amount)
+        public
+        virtual
+        override
+        returns (bool)
+    {
+        _transfer(_msgSender(), recipient, amount);
+        return true;
+    }
+
+    function _transfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual override {
+        require(from != address(0), "ERC20: transfer from the zero address");
+        require(to != address(0), "ERC20: transfer to the zero address");
+
+        _beforeTokenTransfer(from, to, amount);
+
+        uint256 fromBalance = _balances[from];
+        require(
+            fromBalance >= amount,
+            "ERC20: transfer amount exceeds balance"
+        );
+        unchecked {
+            _balances[from] = fromBalance - amount;
+            // Overflow not possible: the sum of all balances is capped by totalSupply, and the sum is preserved by
+            // decrementing then incrementing.
+            _balances[to] += amount;
+        }
+
+        emit Transfer(from, to, amount);
+
+        _afterTokenTransfer(from, to, amount);
     }
 
     function _buy(
@@ -201,9 +299,8 @@ contract SomeFiV2 is
     // ref zone
 
     function setAccountRefInfo(
-        address _sender,
         address referrerAddress,
-        bool isLeft,
+        address _sender,
         uint256 _amount
     ) private {
         (
@@ -220,12 +317,10 @@ contract SomeFiV2 is
         account.branchInvestment += currentPackageSize;
         if (referrerAddress != address(0)) {
             checkIsValidRefAddress(referrerAddress);
-            checkLeftRightAvailable(referrerAddress, isLeft);
             account.ref = referrerAddress;
             Account storage referrer = refInfo[referrerAddress][roundId];
             referrer.branchInvestment += currentPackageSize;
-
-            if (isLeft) {
+            if (referrer.left == address(0)) {
                 referrer.left = _sender;
             } else {
                 referrer.right = _sender;
@@ -262,22 +357,6 @@ contract SomeFiV2 is
         }
         if (ref.left != address(0) && ref.right != address(0)) {
             revert ReferrerHasFull();
-        }
-    }
-
-    function checkLeftRightAvailable(address refAddress, bool isLeft)
-        private
-        view
-    {
-        Account storage ref = refInfo[refAddress][roundId];
-        if (isLeft) {
-            if (ref.left != address(0)) {
-                revert ReferrerHasFullThisBranch();
-            }
-        } else {
-            if (ref.right != address(0)) {
-                revert ReferrerHasFullThisBranch();
-            }
         }
     }
 
@@ -422,6 +501,23 @@ contract SomeFiV2 is
         account.profitClaimed += amountCanClaim;
 
         tokenUSDT.transferFrom(mainWallet, sender, amountCanClaim);
+    }
+
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) public virtual override returns (bool) {
+        _transfer(sender, recipient, amount);
+        _approve(
+            sender,
+            _msgSender(),
+            _allowances[sender][_msgSender()].sub(
+                amount,
+                "BEP20: transfer amount exceeds allowance"
+            )
+        );
+        return true;
     }
 
     function setDirectCommissionPercentage(uint256 _percent)

@@ -6,7 +6,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
 
-contract SomeFi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,OwnableUpgradeable {
+contract SomeFiV2 is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,OwnableUpgradeable {
     
     address public operatorAddress;
 
@@ -49,10 +49,6 @@ contract SomeFi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,Own
     uint256 public startTimeICO;
     bool public icoHasEnded;
     uint256 public ratePerUSDT;
-    
-    mapping(address => uint256) private _balances; 
-
-    mapping(address => mapping(address => uint256)) private _allowances;
 
     mapping(uint256 => uint256) private _amountSoldByRound;
 
@@ -62,25 +58,6 @@ contract SomeFi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,Own
 
 
     mapping(address => bool) public blacklist;
-
-
-    function initialize( address _usdtContractAddress,
-        address _operatorAddress,
-        address _walletBackup,
-        address _walletMain) external initializer {
-        require(_usdtContractAddress != address(0), "invalid-USDT");
-         __ERC20_init("SomeFi","SOFI");
-        __Ownable_init();
-        _mint(msg.sender, 10000000000000000000000000);
-        tokenUSDT =  IERC20Upgradeable(_usdtContractAddress);
-        operatorAddress = _operatorAddress;      
-        icoHasEnded = true;
-        walletBackup = _walletBackup;
-        walletMain = _walletMain;
-        oneHundredPercent = 10000;
-        directCommissionPercentage = 2500;
-        etherValue = 1 ether;
-    }
 
     /// Invalid referrer address
     error InvalidReferrerAddress();
@@ -215,8 +192,8 @@ contract SomeFi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,Own
 
     // ref zone
     
-      function setAccountRefInfo(address referrerAddress,address _sender, uint _amount) public  {
-        (uint maxProfit,uint commissionPercentage, uint currentPackageSize) = _getRatePerAmount(_amount);
+      function setAccountRefInfo(address referrerAddress,address _sender, uint _amount) private  {
+        (uint maxProfit,uint commissionPercentage, uint currentPackageSize) = _getPkgRatePerAmount(_amount);
         Account storage account = refInfo[_sender][roundId];
         account.maxProfit = maxProfit;
         account.isCanBeRef = true;
@@ -240,8 +217,8 @@ contract SomeFi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,Own
       
     }
   
-    function updateAccountRefInfo(address _sender, uint _amount) public {
-        (uint maxProfit, uint commissionPercentage, uint currentPackageSize) = _getRatePerAmount(_amount);
+    function updateAccountRefInfo(address _sender, uint _amount) private {
+        (uint maxProfit, uint commissionPercentage, uint currentPackageSize) = _getPkgRatePerAmount(_amount);
         Account storage account = refInfo[_sender][roundId];
         Account storage referrer = refInfo[account.ref][roundId];
         account.maxProfit += maxProfit;
@@ -258,7 +235,7 @@ contract SomeFi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,Own
         }
     }
 
-    function checkIsValidRefAddress(address refAddress) public view{
+    function checkIsValidRefAddress(address refAddress) private view{
        Account storage ref = refInfo[refAddress][roundId];
         if(!ref.isCanBeRef){
             revert InvalidReferrerAddress();
@@ -268,7 +245,7 @@ contract SomeFi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,Own
         }
     }
 
-    function _getRatePerAmount(uint _amount) public view returns (uint, uint, uint) {
+    function _getPkgRatePerAmount(uint _amount) private view returns (uint, uint, uint) {
         uint maxProfit = 0;
         uint commissionPercentage = 0;
         uint currentPackageSize = 0;
@@ -297,11 +274,8 @@ contract SomeFi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,Own
         return(maxProfit, commissionPercentage, currentPackageSize);
     }
 
-    function setDirectCommissionPercentage(uint _percent) external onlyOwner {
-        require(_percent >= 1 && _percent <= 100, "Percent must be between 1 and 100");
-        directCommissionPercentage = _percent * 100;
-    }
-    function updateSenderSRef (address sender) public returns  (uint) {
+
+    function updateSenderSRef (address sender) private returns  (uint) {
         Account storage currentAddress = refInfo[sender][roundId]; // create currentAdress
         address _address = sender;
         uint countRefLevel = 0;
@@ -381,5 +355,14 @@ contract SomeFi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,Own
         tokenUSDT.transferFrom(walletMain, sender, amountCanClaim);
         
     }
-
+        
+    function setDirectCommissionPercentage(uint _percent) external onlyOperator {
+        require(_percent >= 1 && _percent <= 100, "Percent must be between 1 and 100");
+        directCommissionPercentage = _percent * 100;
+    }    
+    
+    function closeIco() external onlyOperator {
+        icoHasEnded = true;
+    }
+    
 }

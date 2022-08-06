@@ -6,18 +6,16 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
 
-contract SomeFiV2 is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,OwnableUpgradeable {
+contract SomeFi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,OwnableUpgradeable {
     
-    address public operatorAddress;
-
-    uint private oneHundredPercent;
-    uint private directCommissionPercentage;
-    uint public etherValue;
+     uint256 private oneHundredPercent;
+    uint256 private directCommissionPercentage;
+    uint256 public etherValue;
     IERC20Upgradeable public tokenUSDT;
     uint256 private _totalSupply;
     uint8 private _decimals;
     struct UserInfo {
-        uint256 amountICO; 
+        uint256 amountICO;
         uint256 claimAt;
     }
     struct Airdrop {
@@ -26,29 +24,30 @@ contract SomeFiV2 is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,O
     }
 
     struct Account {
-        uint profit; // current profit
-        uint maxProfit; // maximun profit that can be earned
-        uint profitClaimed; // profit user claimed
-        uint currentPackageSize; // largest package size user invested
-        uint totalPackageSize; // total package size user invested
-        uint branchInvestment; // total branch investment of this account
-        uint commissionPercentage; // commission percenatage can earned by currentPackageSize
-        uint totalCommissionProfit; // total commission profit user earned
+        uint256 profit;
+        uint256 maxProfit;
+        uint256 profitClaimed;
+        uint256 currentPackageSize;
+        uint256 totalPackageSize;
+        uint256 branchInvestment;
+        uint256 commissionPercentage;
+        uint256 totalCommissionProfit;
         bool isCanBeRef;
-        address ref; // address of referrer
-        address left; // address of child left
-        address right; // address of child right
+        address ref;
+        address left;
+        address right;
     }
 
-    address walletBackup;
-    address walletMain;
+    address backupWallet;
+    address mainWallet;
 
     // Information of Round
     uint256 public roundId;
     uint256 public totalAmount;
     uint256 public startTimeICO;
-    bool public icoHasEnded;
     uint256 public ratePerUSDT;
+    uint256[5] public pkgAmount;
+    bool public icoHasEnded;
 
     mapping(uint256 => uint256) private _amountSoldByRound;
 
@@ -56,33 +55,58 @@ contract SomeFiV2 is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,O
 
     mapping(address => mapping(uint256 => Account)) public refInfo;
 
+    mapping(address => bool) private operator;
 
     mapping(address => bool) public blacklist;
 
     /// Invalid referrer address
     error InvalidReferrerAddress();
-    
+
     /// Referrer has enough members
     error ReferrerHasFull();
 
-    event buyIco(address buyer, uint amount);
+    /// This branch already has enough members
+    error ReferrerHasFullThisBranch();
+
+    event buyIco(address buyer, uint256 amount);
 
     // ⚪ Modifiers
     modifier onlyOperator() {
-        require(msg.sender == operatorAddress, "not-operator");
+        require(operator[msg.sender], "not-operator");
         _;
-        
     }
 
-    function buyICOByUSDT(  address ref,uint256 amount)
-        external
-    {
+    function initialize(
+        address _usdtContractAddress,
+        address _operatorAddress,
+        address _walletBackup,
+        address _walletMain
+    ) external initializer {
+        require(_usdtContractAddress != address(0), "invalid-USDT");
+        __ERC20_init("SomeFi", "SOFI");
+        __Ownable_init();
+        _mint(msg.sender, 10000000000000000000000000);
+        tokenUSDT = IERC20Upgradeable(_usdtContractAddress);
+        operator[_operatorAddress] = true;
+        icoHasEnded = true;
+        backupWallet = _walletBackup;
+        mainWallet = _walletMain;
+        oneHundredPercent = 10000;
+        directCommissionPercentage = 5000;
+        etherValue = 1 ether;
+    }
+
+    function buyICOByUSDT(
+        address ref,
+        bool isLeft,
+        uint256 amount
+    ) external {
         address sender = _msgSender();
-          _precheckBuy(sender);
+        _precheckBuy(sender);
         if (!refInfo[sender][roundId].isCanBeRef) {
-            setAccountRefInfo(ref, sender, amount );
+            setAccountRefInfo(sender, ref, isLeft, amount);
         } else {
-           updateAccountRefInfo(sender, amount);
+            updateAccountRefInfo(sender, amount);
         }
 
         uint256 buyAmountToken = amount * ratePerUSDT;
@@ -92,46 +116,43 @@ contract SomeFiV2 is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,O
         emit buyIco(sender, amount);
     }
 
-      function _buy(
+    function _buy(
         address sender,
-        uint buyAmountToken,
-        uint amountUsdt
+        uint256 buyAmountToken,
+        uint256 amountUsdt
     ) internal {
-        uint half = amountUsdt / 2;
+        uint256 half = amountUsdt / 2;
         users[sender][roundId].amountICO += buyAmountToken;
         // update total sold by round
         _amountSoldByRound[roundId] += buyAmountToken;
         _mint(sender, buyAmountToken);
 
-        tokenUSDT.transfer(walletBackup, half);
-        tokenUSDT.transfer(walletMain, half);
-
+        tokenUSDT.transfer(backupWallet, half);
+        tokenUSDT.transfer(mainWallet, half);
     }
 
-        function _precheckBuy(address sender) internal view {
+    function _precheckBuy(address sender) internal view {
         require(block.timestamp >= startTimeICO, "ICO time does not start now");
         require(!icoHasEnded, "ICO time is expired");
         _checkBlackList(sender);
-  
     }
-    
+
     function _checkBlackList(address _address) internal view {
         require(_address != address(0), "zero address");
         require(!blacklist[_address], "blacklist user");
     }
 
-
-    function mint(address to, uint amount) external onlyOwner {
+    function mint(address to, uint256 amount) external onlyOwner {
         _mint(to, amount);
     }
 
     //setter
-        function setOperator(address _operatorAddress) external onlyOwner {
+    function setOperator(address _operatorAddress) external onlyOwner {
         require(_operatorAddress != address(0), "Cannot be zero address");
-        operatorAddress = _operatorAddress;
+        operator[_operatorAddress] = true;
     }
 
-     function setRoundInfo(
+    function setRoundInfo(
         uint256 _startTimeICO,
         uint256 _totalAmount,
         uint256 _totalAmountPerUSDT
@@ -140,7 +161,7 @@ contract SomeFiV2 is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,O
         // uint256 _percentClaimPerDate
         onlyOperator
     {
-        require(_startTimeICO > block.timestamp , "invalid time");
+        require(_startTimeICO > block.timestamp, "invalid time");
         require(_totalAmountPerUSDT > 0, "invalid rate buy ICO by USDT");
         require(icoHasEnded, "ICO must end");
         roundId += 1;
@@ -150,10 +171,15 @@ contract SomeFiV2 is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,O
         icoHasEnded = false;
     }
 
-      function addAddressToBlacklist(address _address)
-        external
-        onlyOperator
-    {
+    function setPkgRate(uint256[] memory _pkgAmount) external {
+        pkgAmount[0] = _pkgAmount[0];
+        pkgAmount[1] = _pkgAmount[1];
+        pkgAmount[2] = _pkgAmount[2];
+        pkgAmount[3] = _pkgAmount[3];
+        pkgAmount[4] = _pkgAmount[4];
+    }
+
+    function addAddressToBlacklist(address _address) external onlyOperator {
         require(_address != address(0), "zero address");
         blacklist[_address] = true;
     }
@@ -167,202 +193,264 @@ contract SomeFiV2 is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,O
     }
 
     // getter
-      function getSoldbyRound(uint256 _roundId) public view returns (uint256) {
+    function getSoldbyRound(uint256 _roundId) public view returns (uint256) {
         return _amountSoldByRound[_roundId];
     }
 
-    // 
-        function claimUSDT() external onlyOwner {
+    //
+    function claimUSDT() external onlyOwner {
         uint256 remainAmountToken = tokenUSDT.balanceOf(address(this));
         tokenUSDT.transfer(msg.sender, remainAmountToken);
     }
 
-      function transferAirdrops(Airdrop[] memory arrAirdrop)
+    function transferAirdrops(Airdrop[] memory arrAirdrop)
         external
         onlyOperator
     {
-       
         for (uint256 i = 0; i < arrAirdrop.length; i++) {
-            _mint(
-                arrAirdrop[i].userAddress,
-                arrAirdrop[i].amount
-            );
+            _mint(arrAirdrop[i].userAddress, arrAirdrop[i].amount);
         }
     }
 
     // ref zone
-    
-      function setAccountRefInfo(address referrerAddress,address _sender, uint _amount) private  {
-        (uint maxProfit,uint commissionPercentage, uint currentPackageSize) = _getPkgRatePerAmount(_amount);
+
+    function setAccountRefInfo(
+        address _sender,
+        address referrerAddress,
+        bool isLeft,
+        uint256 _amount
+    ) private {
+        (
+            uint256 maxProfit,
+            uint256 commissionPercentage,
+            uint256 currentPackageSize
+        ) = _getPkgRatePerAmount(_amount);
         Account storage account = refInfo[_sender][roundId];
         account.maxProfit = maxProfit;
         account.isCanBeRef = true;
         account.currentPackageSize = currentPackageSize;
         account.totalPackageSize = currentPackageSize;
         account.commissionPercentage = commissionPercentage;
-        account.branchInvestment += currentPackageSize; // update branch invesment
-        // check if ref of this account not root
+        account.branchInvestment += currentPackageSize;
         if (referrerAddress != address(0)) {
-            checkIsValidRefAddress(referrerAddress); // check if ref is valid (bought)
+            checkIsValidRefAddress(referrerAddress);
+            checkLeftRightAvailable(referrerAddress, isLeft);
             account.ref = referrerAddress;
             Account storage referrer = refInfo[referrerAddress][roundId];
-            referrer.branchInvestment += currentPackageSize; // update branch invesment of referrer
-            if (referrer.left == address(0)){
+            referrer.branchInvestment += currentPackageSize;
+
+            if (isLeft) {
                 referrer.left = _sender;
             } else {
                 referrer.right = _sender;
             }
             updateSenderSRef(_sender);
         }
-      
     }
-  
-    function updateAccountRefInfo(address _sender, uint _amount) private {
-        (uint maxProfit, uint commissionPercentage, uint currentPackageSize) = _getPkgRatePerAmount(_amount);
+
+    function updateAccountRefInfo(address _sender, uint256 _amount) private {
+        (
+            uint256 maxProfit,
+            uint256 commissionPercentage,
+            uint256 currentPackageSize
+        ) = _getPkgRatePerAmount(_amount);
         Account storage account = refInfo[_sender][roundId];
         Account storage referrer = refInfo[account.ref][roundId];
         account.maxProfit += maxProfit;
-        account.branchInvestment += currentPackageSize; // update branch invesment
-        account.totalPackageSize += currentPackageSize; // update current package size
-        referrer.branchInvestment += currentPackageSize; // update referrer investment
-        if(commissionPercentage > account.commissionPercentage){
+        account.branchInvestment += currentPackageSize;
+        account.totalPackageSize += currentPackageSize;
+        referrer.branchInvestment += currentPackageSize;
+        if (commissionPercentage > account.commissionPercentage) {
             account.commissionPercentage = commissionPercentage;
             account.currentPackageSize = currentPackageSize;
         }
-        // earn directCommission
         if (account.ref != address(0)) {
             updateSenderSRef(_sender);
         }
     }
 
-    function checkIsValidRefAddress(address refAddress) private view{
-       Account storage ref = refInfo[refAddress][roundId];
-        if(!ref.isCanBeRef){
+    function checkIsValidRefAddress(address refAddress) private view {
+        Account storage ref = refInfo[refAddress][roundId];
+        if (!ref.isCanBeRef) {
             revert InvalidReferrerAddress();
         }
-        if(ref.left != address(0) && ref.right != address(0)){
+        if (ref.left != address(0) && ref.right != address(0)) {
             revert ReferrerHasFull();
         }
     }
 
-    function _getPkgRatePerAmount(uint _amount) private view returns (uint, uint, uint) {
-        uint maxProfit = 0;
-        uint commissionPercentage = 0;
-        uint currentPackageSize = 0;
-        if(_amount >= 5000 * etherValue){
-            maxProfit = 5000 * 3 * etherValue;
-            commissionPercentage = 1000;
-            currentPackageSize = 5000 * etherValue;
-        }else if(_amount >= 3000 * etherValue){
-            maxProfit = 3000 * 3 * etherValue;
-            commissionPercentage = 900;
-            currentPackageSize = 3000 * etherValue;
-        }else if(_amount >= 1000 * etherValue){
-            maxProfit = 1000 * 3 * etherValue;
-            commissionPercentage = 800;
-            currentPackageSize = 1000 * etherValue;
-        }else if(_amount >= 500 * etherValue){
-            maxProfit = 500 * 3 * etherValue;
-            commissionPercentage = 700;
-            currentPackageSize = 500 * etherValue;
-        }else if(_amount >= 100 * etherValue){
-            maxProfit = 100 * 3 * etherValue;
-            commissionPercentage = 500;
-            currentPackageSize = 100 * etherValue;
+    function checkLeftRightAvailable(address refAddress, bool isLeft)
+        private
+        view
+    {
+        Account storage ref = refInfo[refAddress][roundId];
+        if (isLeft) {
+            if (ref.left != address(0)) {
+                revert ReferrerHasFullThisBranch();
+            }
+        } else {
+            if (ref.right != address(0)) {
+                revert ReferrerHasFullThisBranch();
+            }
         }
-
-        return(maxProfit, commissionPercentage, currentPackageSize);
     }
 
+    function _getPkgRatePerAmount(uint256 _amount)
+        private
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        uint256 maxProfit = 0;
+        uint256 commissionPercentage = 0;
+        uint256 currentPackageSize = 0;
+        if (_amount >= pkgAmount[4] * etherValue) {
+            maxProfit = pkgAmount[4] * 3 * etherValue;
+            commissionPercentage = 1000;
+            currentPackageSize = pkgAmount[4] * etherValue;
+        } else if (_amount >= pkgAmount[3] * etherValue) {
+            maxProfit = pkgAmount[3] * 3 * etherValue;
+            commissionPercentage = 900;
+            currentPackageSize = pkgAmount[3] * etherValue;
+        } else if (_amount >= pkgAmount[2] * etherValue) {
+            maxProfit = pkgAmount[2] * 3 * etherValue;
+            commissionPercentage = 800;
+            currentPackageSize = pkgAmount[2] * etherValue;
+        } else if (_amount >= pkgAmount[1] * etherValue) {
+            maxProfit = pkgAmount[1] * 3 * etherValue;
+            commissionPercentage = 700;
+            currentPackageSize = pkgAmount[1] * etherValue;
+        } else if (_amount >= pkgAmount[0] * etherValue) {
+            maxProfit = pkgAmount[0] * 3 * etherValue;
+            commissionPercentage = 500;
+            currentPackageSize = pkgAmount[0] * etherValue;
+        }
 
-    function updateSenderSRef (address sender) private returns  (uint) {
-        Account storage currentAddress = refInfo[sender][roundId]; // create currentAdress
+        return (maxProfit, commissionPercentage, currentPackageSize);
+    }
+
+    function updateSenderSRef(address sender) private returns (uint256) {
+        Account storage currentAddress = refInfo[sender][roundId];
         address _address = sender;
-        uint countRefLevel = 0;
-        while (currentAddress.ref != address(0) && countRefLevel < 15) { // check if currentAddress have ref
-            Account storage referrer = refInfo[currentAddress.ref][roundId]; // create referrer
+        uint256 countRefLevel = 0;
+        while (currentAddress.ref != address(0) && countRefLevel < 15) {
+            Account storage referrer = refInfo[currentAddress.ref][roundId];
 
-            referrer.branchInvestment = referrer.totalPackageSize + refInfo[referrer.left][roundId].branchInvestment + refInfo[referrer.right][roundId].branchInvestment;
+            referrer.branchInvestment =
+                referrer.totalPackageSize +
+                refInfo[referrer.left][roundId].branchInvestment +
+                refInfo[referrer.right][roundId].branchInvestment;
+            if (_address == referrer.left) {
+                if (referrer.right != address(0)) {
+                    Account storage right = refInfo[referrer.right][roundId];
+                    if (
+                        currentAddress.branchInvestment > right.branchInvestment
+                    ) {
+                        referrer.totalCommissionProfit =
+                            ((right.branchInvestment *
+                                referrer.commissionPercentage) /
+                                oneHundredPercent) +
+                            refInfo[referrer.right][roundId]
+                                .totalCommissionProfit +
+                            currentAddress.totalCommissionProfit;
 
-            // COMPARE WITH OPPOSITE TO UPDATE REFERRER'S PROFIT
-            if (_address == referrer.left) { // check if currentAddress is left
-                if (referrer.right != address(0)) { // check if referrer have right else NOT RECEIVE COMMISSION PERCENTAGE
-                    Account storage right = refInfo[referrer.right][roundId]; // create right
-                    // EARN COMMISSION PERCENTAGE
-                    if (currentAddress.branchInvestment > right.branchInvestment) { // check weak branch is right
-                        // update totalCommisstionProfit
-                        referrer.totalCommissionProfit = 
-                        ((right.branchInvestment * referrer.commissionPercentage) / oneHundredPercent) +
-                        refInfo[referrer.right][roundId].totalCommissionProfit +
-                        currentAddress.totalCommissionProfit;
+                        referrer.profit =
+                            ((right.currentPackageSize *
+                                directCommissionPercentage) /
+                                oneHundredPercent) +
+                            referrer.totalCommissionProfit -
+                            referrer.profitClaimed;
+                    } else {
+                        referrer.totalCommissionProfit =
+                            ((currentAddress.branchInvestment *
+                                referrer.commissionPercentage) /
+                                oneHundredPercent) +
+                            currentAddress.totalCommissionProfit +
+                            refInfo[referrer.right][roundId]
+                                .totalCommissionProfit;
 
-                        referrer.profit = ((right.currentPackageSize * directCommissionPercentage) / oneHundredPercent) + referrer.totalCommissionProfit - referrer.profitClaimed;
-                    } else { // check weak branch is current
-                        // update totalCommisstionProfit
-                        referrer.totalCommissionProfit = 
-                        ((currentAddress.branchInvestment * referrer.commissionPercentage) / oneHundredPercent) +
-                        currentAddress.totalCommissionProfit +
-                        refInfo[referrer.right][roundId].totalCommissionProfit;
-
-                        referrer.profit = ((currentAddress.currentPackageSize * directCommissionPercentage) / oneHundredPercent) + referrer.totalCommissionProfit - referrer.profitClaimed;
+                        referrer.profit =
+                            ((currentAddress.currentPackageSize *
+                                directCommissionPercentage) /
+                                oneHundredPercent) +
+                            referrer.totalCommissionProfit -
+                            referrer.profitClaimed;
                     }
                 }
-            } else { // check if currentAddress is right
-                Account storage left = refInfo[referrer.left][roundId]; // create left
-                // EARN COMMISSION PERCENTAGE
-                if (currentAddress.branchInvestment > left.branchInvestment) { // check weak branch is left
-                    // update totalCommisstionProfit
-                    referrer.totalCommissionProfit = 
-                    ((left.branchInvestment * referrer.commissionPercentage) / oneHundredPercent) +
-                    refInfo[referrer.left][roundId].totalCommissionProfit +
-                    currentAddress.totalCommissionProfit;
+            } else {
+                Account storage left = refInfo[referrer.left][roundId];
+                if (currentAddress.branchInvestment > left.branchInvestment) {
+                    referrer.totalCommissionProfit =
+                        ((left.branchInvestment *
+                            referrer.commissionPercentage) /
+                            oneHundredPercent) +
+                        refInfo[referrer.left][roundId].totalCommissionProfit +
+                        currentAddress.totalCommissionProfit;
 
-                    referrer.profit = ((left.currentPackageSize * directCommissionPercentage) / oneHundredPercent) + referrer.totalCommissionProfit - referrer.profitClaimed;
-                } else { // check weak branch is current
-                    // update totalCommisstionProfit
-                    referrer.totalCommissionProfit = 
-                    ((currentAddress.branchInvestment * referrer.commissionPercentage) / oneHundredPercent) +
-                    currentAddress.totalCommissionProfit +
-                    refInfo[referrer.left][roundId].totalCommissionProfit;
+                    referrer.profit =
+                        ((left.currentPackageSize *
+                            directCommissionPercentage) / oneHundredPercent) +
+                        referrer.totalCommissionProfit -
+                        referrer.profitClaimed;
+                } else {
+                    referrer.totalCommissionProfit =
+                        ((currentAddress.branchInvestment *
+                            referrer.commissionPercentage) /
+                            oneHundredPercent) +
+                        currentAddress.totalCommissionProfit +
+                        refInfo[referrer.left][roundId].totalCommissionProfit;
 
-                    referrer.profit = ((currentAddress.currentPackageSize * directCommissionPercentage) / oneHundredPercent) + referrer.totalCommissionProfit - referrer.profitClaimed;
+                    referrer.profit =
+                        ((currentAddress.currentPackageSize *
+                            directCommissionPercentage) / oneHundredPercent) +
+                        referrer.totalCommissionProfit -
+                        referrer.profitClaimed;
                 }
             }
-            // set new address
             _address = currentAddress.ref;
-            // condition to continue while loop => set currentAddress = it's ref
             currentAddress = refInfo[currentAddress.ref][roundId];
             countRefLevel++;
         }
         return countRefLevel;
     }
 
-    function claimCommission(uint round) external {
+    function claimCommission(uint256 round) external {
         address sender = _msgSender();
-        uint amount;
+        uint256 amount;
         Account storage account = refInfo[sender][round];
-        uint balanceOfWalletMain = tokenUSDT.balanceOf(walletMain);
-        if(account.profit > account.maxProfit){
+        uint256 balanceOfMainWallet = tokenUSDT.balanceOf(mainWallet);
+        if (account.profit > account.maxProfit) {
             amount = account.maxProfit;
-        }else{
+        } else {
             amount = account.profit;
         }
 
-        uint amountCanClaim = amount - account.profitClaimed;
-        require(amountCanClaim <= balanceOfWalletMain, "Main Wallet transfer amount exceeds allowance");
+        uint256 amountCanClaim = amount;
+        require(
+            amountCanClaim <= balanceOfMainWallet,
+            "Main Wallet transfer amount exceeds allowance"
+        );
         account.profitClaimed += amountCanClaim;
 
-        tokenUSDT.transferFrom(walletMain, sender, amountCanClaim);
-        
+        tokenUSDT.transferFrom(mainWallet, sender, amountCanClaim);
     }
-        
-    function setDirectCommissionPercentage(uint _percent) external onlyOperator {
-        require(_percent >= 1 && _percent <= 100, "Percent must be between 1 and 100");
+
+    function setDirectCommissionPercentage(uint256 _percent)
+        external
+        onlyOperator
+    {
+        require(
+            _percent >= 1 && _percent <= 100,
+            "Percent must be between 1 and 100"
+        );
         directCommissionPercentage = _percent * 100;
-    }    
-    
+    }
+
     function closeIco() external onlyOperator {
         icoHasEnded = true;
     }
-    
+
 }

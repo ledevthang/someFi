@@ -367,8 +367,7 @@ contract SomeFiV2 is
                             ((right.currentPackageSize *
                                 directCommissionPercentage) /
                                 oneHundredPercent) +
-                            referrer.totalCommissionProfit -
-                            referrer.profitClaimed;
+                            referrer.totalCommissionProfit;
                     } else {
                         referrer.totalCommissionProfit =
                             ((currentAddress.branchInvestment *
@@ -382,8 +381,7 @@ contract SomeFiV2 is
                             ((currentAddress.currentPackageSize *
                                 directCommissionPercentage) /
                                 oneHundredPercent) +
-                            referrer.totalCommissionProfit -
-                            referrer.profitClaimed;
+                            referrer.totalCommissionProfit;
                     }
                 }
             } else {
@@ -399,8 +397,7 @@ contract SomeFiV2 is
                     referrer.profit =
                         ((left.currentPackageSize *
                             directCommissionPercentage) / oneHundredPercent) +
-                        referrer.totalCommissionProfit -
-                        referrer.profitClaimed;
+                        referrer.totalCommissionProfit;
                 } else {
                     referrer.totalCommissionProfit =
                         ((currentAddress.branchInvestment *
@@ -412,8 +409,7 @@ contract SomeFiV2 is
                     referrer.profit =
                         ((currentAddress.currentPackageSize *
                             directCommissionPercentage) / oneHundredPercent) +
-                        referrer.totalCommissionProfit -
-                        referrer.profitClaimed;
+                        referrer.totalCommissionProfit;
                 }
             }
             _address = currentAddress.ref;
@@ -434,14 +430,14 @@ contract SomeFiV2 is
             amount = account.profit;
         }
 
-        uint256 amountCanClaim = amount;
+        uint256 amountCanClaim = amount - account.profitClaimed;
         require(
             amountCanClaim <= balanceOfMainWallet,
             "Main Wallet transfer amount exceeds allowance"
         );
-        account.profitClaimed += amountCanClaim;
 
         tokenUSDT.transferFrom(mainWallet, sender, amountCanClaim);
+        account.profitClaimed += amountCanClaim;
     }
 
     function setDirectCommissionPercentage(uint256 _percent)

@@ -6,9 +6,13 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
 
-contract SomeFi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,OwnableUpgradeable {
-    
-     uint256 private oneHundredPercent;
+contract SomeFi is
+    Initializable,
+    ERC20Upgradeable,
+    ERC20BurnableUpgradeable,
+    OwnableUpgradeable
+{
+    uint256 private oneHundredPercent;
     uint256 private directCommissionPercentage;
     uint256 public etherValue;
     IERC20Upgradeable public tokenUSDT;
@@ -361,8 +365,7 @@ contract SomeFi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,Own
                             ((right.currentPackageSize *
                                 directCommissionPercentage) /
                                 oneHundredPercent) +
-                            referrer.totalCommissionProfit -
-                            referrer.profitClaimed;
+                            referrer.totalCommissionProfit;
                     } else {
                         referrer.totalCommissionProfit =
                             ((currentAddress.branchInvestment *
@@ -376,8 +379,7 @@ contract SomeFi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,Own
                             ((currentAddress.currentPackageSize *
                                 directCommissionPercentage) /
                                 oneHundredPercent) +
-                            referrer.totalCommissionProfit -
-                            referrer.profitClaimed;
+                            referrer.totalCommissionProfit;
                     }
                 }
             } else {
@@ -393,8 +395,7 @@ contract SomeFi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,Own
                     referrer.profit =
                         ((left.currentPackageSize *
                             directCommissionPercentage) / oneHundredPercent) +
-                        referrer.totalCommissionProfit -
-                        referrer.profitClaimed;
+                        referrer.totalCommissionProfit;
                 } else {
                     referrer.totalCommissionProfit =
                         ((currentAddress.branchInvestment *
@@ -406,8 +407,7 @@ contract SomeFi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,Own
                     referrer.profit =
                         ((currentAddress.currentPackageSize *
                             directCommissionPercentage) / oneHundredPercent) +
-                        referrer.totalCommissionProfit -
-                        referrer.profitClaimed;
+                        referrer.totalCommissionProfit;
                 }
             }
             _address = currentAddress.ref;
@@ -428,7 +428,7 @@ contract SomeFi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,Own
             amount = account.profit;
         }
 
-        uint256 amountCanClaim = amount;
+        uint256 amountCanClaim = amount - account.profitClaimed;
         require(
             amountCanClaim <= balanceOfMainWallet,
             "Main Wallet transfer amount exceeds allowance"
@@ -452,5 +452,4 @@ contract SomeFi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,Own
     function closeIco() external onlyOperator {
         icoHasEnded = true;
     }
-
 }

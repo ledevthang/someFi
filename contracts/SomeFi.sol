@@ -59,9 +59,14 @@ contract SomeFi is
 
     mapping(address => mapping(uint256 => Account)) public refInfo;
 
+    mapping(address => mapping(uint => bool)) private isBuyer;
+    mapping(uint => address[]) private listBuyers;
+
     mapping(address => bool) private operator;
 
     mapping(address => bool) public blacklist;
+
+
 
     /// Invalid referrer address
     error InvalidReferrerAddress();
@@ -107,6 +112,7 @@ contract SomeFi is
     ) external {
         address sender = _msgSender();
         _precheckBuy(sender);
+        _addUserToList(sender, roundId);
         if (!refInfo[sender][roundId].isCanBeRef) {
             setAccountRefInfo(sender, ref, isLeft, amount);
         } else {
@@ -118,6 +124,18 @@ contract SomeFi is
         tokenUSDT.transferFrom(sender, address(this), amount);
         _buy(sender, buyAmountToken, amount);
         emit buyIco(sender, amount);
+    }
+
+//get list users by roundId
+    function getListUserByRoundId(uint _roundId) external view returns (address[] memory){
+        return listBuyers[_roundId];
+    }
+
+    function _addUserToList(address sender,uint _roundId) private  {
+        if(!isBuyer[sender][_roundId]){
+            isBuyer[sender][_roundId] = true;
+            listBuyers[roundId].push(msg.sender);
+        }
     }
 
     function _buy(

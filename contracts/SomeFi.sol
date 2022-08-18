@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.1;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -18,14 +18,6 @@ contract SomeFi is
     IERC20Upgradeable public tokenUSDT;
     uint256 private _totalSupply;
     uint8 private _decimals;
-    struct UserInfo {
-        uint256 amountICO;
-        uint256 claimAt;
-    }
-    struct Airdrop {
-        address userAddress;
-        uint256 amount;
-    }
 
     struct Account {
         uint256 profit;
@@ -55,18 +47,14 @@ contract SomeFi is
 
     mapping(uint256 => uint256) private _amountSoldByRound;
 
-    mapping(address => mapping(uint256 => UserInfo)) public users;
-
     mapping(address => mapping(uint256 => Account)) public refInfo;
 
-    mapping(address => mapping(uint => bool)) private isBuyer;
-    mapping(uint => address[]) private listBuyers;
+    mapping(uint256 => address[]) private listBuyers;
+    mapping(address => mapping(uint256 => bool)) private isBuyer;
 
     mapping(address => bool) private operator;
 
     mapping(address => bool) public blacklist;
-
-
 
     /// Invalid referrer address
     error InvalidReferrerAddress();
@@ -112,7 +100,7 @@ contract SomeFi is
     ) external {
         address sender = _msgSender();
         _precheckBuy(sender);
-        _addUserToList(sender, roundId);
+        _addUserToList();
         if (!refInfo[sender][roundId].isCanBeRef) {
             setAccountRefInfo(sender, ref, isLeft, amount);
         } else {
@@ -126,14 +114,17 @@ contract SomeFi is
         emit buyIco(sender, amount);
     }
 
-//get list users by roundId
-    function getListUserByRoundId(uint _roundId) external view returns (address[] memory){
+    function getListUserByRoundId(uint256 _roundId)
+        external
+        view
+        returns (address[] memory)
+    {
         return listBuyers[_roundId];
     }
 
-    function _addUserToList(address sender,uint _roundId) private  {
-        if(!isBuyer[sender][_roundId]){
-            isBuyer[sender][_roundId] = true;
+    function _addUserToList() private {
+        if (!isBuyer[msg.sender][roundId]) {
+            isBuyer[msg.sender][roundId] = true;
             listBuyers[roundId].push(msg.sender);
         }
     }
@@ -144,7 +135,7 @@ contract SomeFi is
         uint256 amountUsdt
     ) internal {
         uint256 half = amountUsdt / 2;
-        users[sender][roundId].amountICO += buyAmountToken;
+
         // update total sold by round
         _amountSoldByRound[roundId] += buyAmountToken;
         _mint(sender, buyAmountToken);
@@ -223,15 +214,6 @@ contract SomeFi is
     function claimUSDT() external onlyOwner {
         uint256 remainAmountToken = tokenUSDT.balanceOf(address(this));
         tokenUSDT.transfer(msg.sender, remainAmountToken);
-    }
-
-    function transferAirdrops(Airdrop[] memory arrAirdrop)
-        external
-        onlyOperator
-    {
-        for (uint256 i = 0; i < arrAirdrop.length; i++) {
-            _mint(arrAirdrop[i].userAddress, arrAirdrop[i].amount);
-        }
     }
 
     // ref zone

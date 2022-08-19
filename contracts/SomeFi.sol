@@ -37,12 +37,12 @@ contract SomeFi is
     address backupWallet;
     address mainWallet;
 
-    // Information of Round
     uint256 public roundId;
     uint256 public totalAmount;
     uint256 public startTimeICO;
     uint256 public ratePerUSDT;
     uint256[5] public pkgAmount;
+    uint256[5] public pkgRate;
     bool public icoHasEnded;
 
     mapping(uint256 => uint256) private _amountSoldByRound;
@@ -67,7 +67,6 @@ contract SomeFi is
 
     event buyIco(address buyer, uint256 amount);
 
-    // ⚪ Modifiers
     modifier onlyOperator() {
         require(operator[msg.sender], "not-operator");
         _;
@@ -114,6 +113,7 @@ contract SomeFi is
         emit buyIco(sender, amount);
     }
 
+    //get list users by roundId
     function getListUserByRoundId(uint256 _roundId)
         external
         view
@@ -135,8 +135,6 @@ contract SomeFi is
         uint256 amountUsdt
     ) internal {
         uint256 half = amountUsdt / 2;
-
-        // update total sold by round
         _amountSoldByRound[roundId] += buyAmountToken;
         _mint(sender, buyAmountToken);
 
@@ -159,7 +157,6 @@ contract SomeFi is
         _mint(to, amount);
     }
 
-    //setter
     function setOperator(address _operatorAddress) external onlyOwner {
         require(_operatorAddress != address(0), "Cannot be zero address");
         operator[_operatorAddress] = true;
@@ -184,12 +181,19 @@ contract SomeFi is
         icoHasEnded = false;
     }
 
-    function setPkgRate(uint256[] memory _pkgAmount) external {
+    function setPkgRate(uint256[] memory _pkgAmount, uint256[] memory _pkgRate)
+        external
+    {
         pkgAmount[0] = _pkgAmount[0];
         pkgAmount[1] = _pkgAmount[1];
         pkgAmount[2] = _pkgAmount[2];
         pkgAmount[3] = _pkgAmount[3];
         pkgAmount[4] = _pkgAmount[4];
+        pkgRate[0] = _pkgRate[0];
+        pkgRate[1] = _pkgRate[1];
+        pkgRate[2] = _pkgRate[2];
+        pkgRate[3] = _pkgRate[3];
+        pkgRate[4] = _pkgRate[4];
     }
 
     function addAddressToBlacklist(address _address) external onlyOperator {
@@ -205,18 +209,14 @@ contract SomeFi is
         delete blacklist[_address];
     }
 
-    // getter
     function getSoldbyRound(uint256 _roundId) public view returns (uint256) {
         return _amountSoldByRound[_roundId];
     }
 
-    //
     function claimUSDT() external onlyOwner {
         uint256 remainAmountToken = tokenUSDT.balanceOf(address(this));
         tokenUSDT.transfer(msg.sender, remainAmountToken);
     }
-
-    // ref zone
 
     function setAccountRefInfo(
         address _sender,
@@ -313,34 +313,60 @@ contract SomeFi is
         uint256 currentPackageSize = 0;
         if (_amount >= pkgAmount[4] * etherValue) {
             maxProfit = pkgAmount[4] * 3 * etherValue;
-            commissionPercentage = 1000;
+            commissionPercentage = pkgRate[4];
             currentPackageSize = pkgAmount[4] * etherValue;
         } else if (_amount >= pkgAmount[3] * etherValue) {
             maxProfit = pkgAmount[3] * 3 * etherValue;
-            commissionPercentage = 900;
+            commissionPercentage = pkgRate[3];
             currentPackageSize = pkgAmount[3] * etherValue;
         } else if (_amount >= pkgAmount[2] * etherValue) {
             maxProfit = pkgAmount[2] * 3 * etherValue;
-            commissionPercentage = 800;
+            commissionPercentage = pkgRate[2];
             currentPackageSize = pkgAmount[2] * etherValue;
         } else if (_amount >= pkgAmount[1] * etherValue) {
             maxProfit = pkgAmount[1] * 3 * etherValue;
-            commissionPercentage = 700;
+            commissionPercentage = pkgRate[1];
             currentPackageSize = pkgAmount[1] * etherValue;
         } else if (_amount >= pkgAmount[0] * etherValue) {
             maxProfit = pkgAmount[0] * 3 * etherValue;
-            commissionPercentage = 500;
+            commissionPercentage = pkgRate[0];
             currentPackageSize = pkgAmount[0] * etherValue;
         }
 
         return (maxProfit, commissionPercentage, currentPackageSize);
     }
 
+    function updateTotalCommissionProfit(
+        address _refAddress,
+        address _weakBranchAddress,
+        address _strongBranchAddress
+    ) private {
+        Account storage ref = refInfo[_refAddress][roundId];
+        Account storage weakBranch = refInfo[_weakBranchAddress][roundId];
+        Account storage strongBranch = refInfo[_strongBranchAddress][roundId];
+        ref.totalCommissionProfit =
+            ((weakBranch.branchInvestment * ref.commissionPercentage) /
+                oneHundredPercent) +
+            weakBranch.totalCommissionProfit +
+            strongBranch.totalCommissionProfit;
+    }
+
+    function updateRefProfit(address _refAddress, address _weakBranchAddress)
+        private
+    {
+        Account storage ref = refInfo[_refAddress][roundId];
+        Account storage weakBranch = refInfo[_weakBranchAddress][roundId];
+        ref.profit =
+            ((weakBranch.currentPackageSize * directCommissionPercentage) /
+                oneHundredPercent) +
+            ref.totalCommissionProfit;
+    }
+
     function updateSenderSRef(address sender) private returns (uint256) {
         Account storage currentAddress = refInfo[sender][roundId];
         address _address = sender;
         uint256 countRefLevel = 0;
-        while (currentAddress.ref != address(0) && countRefLevel < 15) {
+        while (currentAddress.ref != address(0) && countRefLevel < 10) {
             Account storage referrer = refInfo[currentAddress.ref][roundId];
 
             referrer.branchInvestment =
@@ -353,65 +379,41 @@ contract SomeFi is
                     if (
                         currentAddress.branchInvestment > right.branchInvestment
                     ) {
-                        referrer.totalCommissionProfit =
-                            ((right.branchInvestment *
-                                referrer.commissionPercentage) /
-                                oneHundredPercent) +
-                            refInfo[referrer.right][roundId]
-                                .totalCommissionProfit +
-                            currentAddress.totalCommissionProfit;
-
-                        referrer.profit =
-                            ((right.currentPackageSize *
-                                directCommissionPercentage) /
-                                oneHundredPercent) +
-                            referrer.totalCommissionProfit;
+                        updateTotalCommissionProfit(
+                            currentAddress.ref,
+                            referrer.right,
+                            _address
+                        );
+                        updateRefProfit(currentAddress.ref, referrer.right);
                     } else {
-                        referrer.totalCommissionProfit =
-                            ((currentAddress.branchInvestment *
-                                referrer.commissionPercentage) /
-                                oneHundredPercent) +
-                            currentAddress.totalCommissionProfit +
-                            refInfo[referrer.right][roundId]
-                                .totalCommissionProfit;
-
-                        referrer.profit =
-                            ((currentAddress.currentPackageSize *
-                                directCommissionPercentage) /
-                                oneHundredPercent) +
-                            referrer.totalCommissionProfit;
+                        updateTotalCommissionProfit(
+                            currentAddress.ref,
+                            _address,
+                            referrer.right
+                        );
+                        updateRefProfit(currentAddress.ref, _address);
                     }
                 }
             } else {
                 Account storage left = refInfo[referrer.left][roundId];
                 if (currentAddress.branchInvestment > left.branchInvestment) {
-                    referrer.totalCommissionProfit =
-                        ((left.branchInvestment *
-                            referrer.commissionPercentage) /
-                            oneHundredPercent) +
-                        refInfo[referrer.left][roundId].totalCommissionProfit +
-                        currentAddress.totalCommissionProfit;
-
-                    referrer.profit =
-                        ((left.currentPackageSize *
-                            directCommissionPercentage) / oneHundredPercent) +
-                        referrer.totalCommissionProfit;
+                    updateTotalCommissionProfit(
+                        currentAddress.ref,
+                        referrer.left,
+                        _address
+                    );
+                    updateRefProfit(currentAddress.ref, referrer.left);
                 } else {
-                    referrer.totalCommissionProfit =
-                        ((currentAddress.branchInvestment *
-                            referrer.commissionPercentage) /
-                            oneHundredPercent) +
-                        currentAddress.totalCommissionProfit +
-                        refInfo[referrer.left][roundId].totalCommissionProfit;
-
-                    referrer.profit =
-                        ((currentAddress.currentPackageSize *
-                            directCommissionPercentage) / oneHundredPercent) +
-                        referrer.totalCommissionProfit;
+                    updateTotalCommissionProfit(
+                        currentAddress.ref,
+                        _address,
+                        referrer.left
+                    );
+                    updateRefProfit(currentAddress.ref, _address);
                 }
             }
-            _address = currentAddress.ref;
-            currentAddress = refInfo[currentAddress.ref][roundId];
+            _address = currentAddress.ref; // 0x83B5064fcAB70a342d72b7a1DF3B091D2AB12693
+            currentAddress = refInfo[currentAddress.ref][roundId]; // info of 0x83B5064fcAB70a342d72b7a1DF3B091D2AB12693
             countRefLevel++;
         }
         return countRefLevel;
@@ -433,9 +435,9 @@ contract SomeFi is
             amountCanClaim <= balanceOfMainWallet,
             "Main Wallet transfer amount exceeds allowance"
         );
-        account.profitClaimed += amountCanClaim;
 
         tokenUSDT.transferFrom(mainWallet, sender, amountCanClaim);
+        account.profitClaimed += amountCanClaim;
     }
 
     function setDirectCommissionPercentage(uint256 _percent)
@@ -453,4 +455,3 @@ contract SomeFi is
         icoHasEnded = true;
     }
 }
-

@@ -368,11 +368,16 @@ contract SomeFi is
         uint256 countRefLevel = 0;
         while (currentAddress.ref != address(0) && countRefLevel < 10) {
             Account storage referrer = refInfo[currentAddress.ref][roundId];
-
+            uint256 leftBranchInvestment = referrer.left == address(0)
+                ? 0
+                : refInfo[referrer.left][roundId].branchInvestment;
+            uint256 rightBranchInvestment = referrer.right == address(0)
+                ? 0
+                : refInfo[referrer.right][roundId].branchInvestment;
             referrer.branchInvestment =
                 referrer.totalPackageSize +
-                refInfo[referrer.left][roundId].branchInvestment +
-                refInfo[referrer.right][roundId].branchInvestment;
+                leftBranchInvestment +
+                rightBranchInvestment;
             if (_address == referrer.left) {
                 if (referrer.right != address(0)) {
                     Account storage right = refInfo[referrer.right][roundId];
@@ -395,21 +400,25 @@ contract SomeFi is
                     }
                 }
             } else {
-                Account storage left = refInfo[referrer.left][roundId];
-                if (currentAddress.branchInvestment > left.branchInvestment) {
-                    updateTotalCommissionProfit(
-                        currentAddress.ref,
-                        referrer.left,
-                        _address
-                    );
-                    updateRefProfit(currentAddress.ref, referrer.left);
-                } else {
-                    updateTotalCommissionProfit(
-                        currentAddress.ref,
-                        _address,
-                        referrer.left
-                    );
-                    updateRefProfit(currentAddress.ref, _address);
+                if (referrer.left != address(0)) {
+                    Account storage left = refInfo[referrer.left][roundId];
+                    if (
+                        currentAddress.branchInvestment > left.branchInvestment
+                    ) {
+                        updateTotalCommissionProfit(
+                            currentAddress.ref,
+                            referrer.left,
+                            _address
+                        );
+                        updateRefProfit(currentAddress.ref, referrer.left);
+                    } else {
+                        updateTotalCommissionProfit(
+                            currentAddress.ref,
+                            _address,
+                            referrer.left
+                        );
+                        updateRefProfit(currentAddress.ref, _address);
+                    }
                 }
             }
             _address = currentAddress.ref; // 0x83B5064fcAB70a342d72b7a1DF3B091D2AB12693

@@ -236,7 +236,7 @@ contract SomeFi is
         account.totalPackageSize = currentPackageSize;
         account.commissionPercentage = commissionPercentage;
         account.branchInvestment += currentPackageSize;
-        if (referrerAddress != address(0)) {
+        if (referrerAddress != address(0) && referrerAddress != _sender) {
             checkIsValidRefAddress(referrerAddress);
             checkLeftRightAvailable(referrerAddress, isLeft);
             account.ref = referrerAddress;
@@ -368,12 +368,16 @@ contract SomeFi is
         uint256 countRefLevel = 0;
         while (currentAddress.ref != address(0) && countRefLevel < 10) {
             Account storage referrer = refInfo[currentAddress.ref][roundId];
-            uint256 leftBranchInvestment = referrer.left == address(0)
-                ? 0
-                : refInfo[referrer.left][roundId].branchInvestment;
-            uint256 rightBranchInvestment = referrer.right == address(0)
-                ? 0
-                : refInfo[referrer.right][roundId].branchInvestment;
+            uint256 leftBranchInvestment = (
+                referrer.left == address(0)
+                    ? 0
+                    : refInfo[referrer.left][roundId].branchInvestment
+            );
+            uint256 rightBranchInvestment = (
+                referrer.right == address(0)
+                    ? 0
+                    : refInfo[referrer.right][roundId].branchInvestment
+            );
             referrer.branchInvestment =
                 referrer.totalPackageSize +
                 leftBranchInvestment +

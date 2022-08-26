@@ -12,4 +12,5 @@ npx hardhat node
 Update code in SomeFi.sol
 npx hardhat run scripts/deploy.js --network bnbTest
 npx hardhat run scripts/upgrade_box_v2.js --network bnbTest
+npx hardhat verify address --network bnbTest
 ```

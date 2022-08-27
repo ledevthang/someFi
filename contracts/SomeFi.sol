@@ -338,17 +338,14 @@ contract SomeFi is
 
     function updateTotalCommissionProfit(
         address _refAddress,
-        address _weakBranchAddress,
-        address _strongBranchAddress
+        address _weakBranchAddress
     ) private {
         Account storage ref = refInfo[_refAddress][roundId];
         Account storage weakBranch = refInfo[_weakBranchAddress][roundId];
-        Account storage strongBranch = refInfo[_strongBranchAddress][roundId];
         ref.totalCommissionProfit =
             ((weakBranch.branchInvestment * ref.commissionPercentage) /
                 oneHundredPercent) +
-            weakBranch.totalCommissionProfit +
-            strongBranch.totalCommissionProfit;
+            weakBranch.totalCommissionProfit;
     }
 
     function updateRefProfit(address _refAddress, address _weakBranchAddress)
@@ -390,15 +387,13 @@ contract SomeFi is
                     ) {
                         updateTotalCommissionProfit(
                             currentAddress.ref,
-                            referrer.right,
-                            _address
+                            referrer.right
                         );
                         updateRefProfit(currentAddress.ref, referrer.right);
                     } else {
                         updateTotalCommissionProfit(
                             currentAddress.ref,
-                            _address,
-                            referrer.right
+                            _address
                         );
                         updateRefProfit(currentAddress.ref, _address);
                     }
@@ -411,15 +406,13 @@ contract SomeFi is
                     ) {
                         updateTotalCommissionProfit(
                             currentAddress.ref,
-                            referrer.left,
-                            _address
+                            referrer.left
                         );
                         updateRefProfit(currentAddress.ref, referrer.left);
                     } else {
                         updateTotalCommissionProfit(
                             currentAddress.ref,
-                            _address,
-                            referrer.left
+                            _address
                         );
                         updateRefProfit(currentAddress.ref, _address);
                     }

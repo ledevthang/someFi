@@ -430,6 +430,7 @@ contract SomeFi is
         uint256 amount;
         Account storage account = refInfo[sender][round];
         uint256 balanceOfMainWallet = tokenUSDT.balanceOf(mainWallet);
+        _checkBlackList(sender);
         if (account.profit > account.maxProfit) {
             amount = account.maxProfit;
         } else {

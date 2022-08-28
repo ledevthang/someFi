@@ -45,6 +45,10 @@ contract SomeFi is
     uint256[5] public pkgRate;
     bool public icoHasEnded;
 
+    mapping(address => mapping(uint => uint)) private tokenFromDapp;
+    
+    bool public isLockTokenDapp;
+
     mapping(uint256 => uint256) private _amountSoldByRound;
 
     mapping(address => mapping(uint256 => Account)) public refInfo;
@@ -460,4 +464,44 @@ contract SomeFi is
     function closeIco() external onlyOperator {
         icoHasEnded = true;
     }
+    
+    // lock transfer token from Dapp
+     function setIsLockTokenDapp(bool _isLock) external onlyOwner {
+        isLockTokenDapp =_isLock;
+    }
+
+    function transfer(address to, uint256 amount)
+        public
+        override
+        returns (bool)
+    {
+        address owner = _msgSender();
+        if (isLockTokenDapp) {
+            uint256 amountToken = balanceOf(owner);
+            uint256 availableToken = amountToken - tokenFromDapp[owner][roundId];
+            require(
+                availableToken >= amount,
+                "ERC20: transfer amount exceeds balance"
+            );
+            _transfer(owner, to, amount);
+            return true;
+        } else {
+           return super.transfer(to,amount);
+        }
+    }
+
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal override {
+        if (from == address(0) && isLockTokenDapp ) {
+           tokenFromDapp[to][roundId] += amount;
+        } else {
+            super._beforeTokenTransfer(from, to, amount);
+        }
+    }
+
+    
+    
 }

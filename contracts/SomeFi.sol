@@ -12,12 +12,9 @@ contract SomeFi is
     ERC20BurnableUpgradeable,
     OwnableUpgradeable
 {
-    uint256 private oneHundredPercent;
     uint256 private directCommissionPercentage;
     uint256 public etherValue;
     IERC20Upgradeable public tokenUSDT;
-    uint256 private _totalSupply;
-    uint8 private _decimals;
 
     struct Account {
         uint256 profit;
@@ -28,7 +25,9 @@ contract SomeFi is
         uint256 branchInvestment;
         uint256 commissionPercentage;
         uint256 totalCommissionProfit;
+        uint256 directRefProfit;
         bool isCanBeRef;
+        address directRef;
         address ref;
         address left;
         address right;
@@ -38,15 +37,12 @@ contract SomeFi is
     address mainWallet;
 
     uint256 public roundId;
-    uint256 public totalAmount;
     uint256 public startTimeICO;
     uint256 public ratePerUSDT;
-    uint256[5] public pkgAmount;
-    uint256[5] public pkgRate;
     bool public icoHasEnded;
 
-    mapping(address => mapping(uint => uint)) private tokenFromDapp;
-    
+    mapping(address => mapping(uint256 => uint256)) private tokenFromDapp;
+
     bool public isLockTokenDapp;
 
     mapping(uint256 => uint256) private _amountSoldByRound;
@@ -91,13 +87,13 @@ contract SomeFi is
         icoHasEnded = true;
         backupWallet = _walletBackup;
         mainWallet = _walletMain;
-        oneHundredPercent = 10000;
         directCommissionPercentage = 5000;
         etherValue = 1 ether;
     }
 
     function buyICOByUSDT(
         address ref,
+        address directRef,
         bool isLeft,
         uint256 amount
     ) external {
@@ -105,7 +101,7 @@ contract SomeFi is
         _precheckBuy(sender);
         _addUserToList();
         if (!refInfo[sender][roundId].isCanBeRef) {
-            setAccountRefInfo(sender, ref, isLeft, amount);
+            setAccountRefInfo(sender, ref, directRef, isLeft, amount);
         } else {
             updateAccountRefInfo(sender, amount);
         }
@@ -115,6 +111,18 @@ contract SomeFi is
         tokenUSDT.transferFrom(sender, address(this), amount);
         _buy(sender, buyAmountToken, amount);
         emit buyIco(sender, amount);
+    }
+
+    function updateDirectProfit(Account memory _sender, uint256 _amount)
+        private
+    {
+        Account storage directRef = refInfo[_sender.directRef][roundId];
+        directRef.directRefProfit += ((_amount * directCommissionPercentage) /
+            10000);
+        if (directRef.left != address(0) && directRef.right != address(0)) {
+            directRef.profit += ((_amount * directCommissionPercentage) /
+                10000);
+        }
     }
 
     //get list users by roundId
@@ -166,11 +174,7 @@ contract SomeFi is
         operator[_operatorAddress] = true;
     }
 
-    function setRoundInfo(
-        uint256 _startTimeICO,
-        uint256 _totalAmount,
-        uint256 _totalAmountPerUSDT
-    )
+    function setRoundInfo(uint256 _startTimeICO, uint256 _totalAmountPerUSDT)
         external
         // uint256 _percentClaimPerDate
         onlyOperator
@@ -179,25 +183,9 @@ contract SomeFi is
         require(_totalAmountPerUSDT > 0, "invalid rate buy ICO by USDT");
         require(icoHasEnded, "ICO must end");
         roundId += 1;
-        totalAmount = _totalAmount;
         startTimeICO = _startTimeICO;
         ratePerUSDT = _totalAmountPerUSDT;
         icoHasEnded = false;
-    }
-
-    function setPkgRate(uint256[] memory _pkgAmount, uint256[] memory _pkgRate)
-        external
-    {
-        pkgAmount[0] = _pkgAmount[0];
-        pkgAmount[1] = _pkgAmount[1];
-        pkgAmount[2] = _pkgAmount[2];
-        pkgAmount[3] = _pkgAmount[3];
-        pkgAmount[4] = _pkgAmount[4];
-        pkgRate[0] = _pkgRate[0];
-        pkgRate[1] = _pkgRate[1];
-        pkgRate[2] = _pkgRate[2];
-        pkgRate[3] = _pkgRate[3];
-        pkgRate[4] = _pkgRate[4];
     }
 
     function addAddressToBlacklist(address _address) external onlyOperator {
@@ -225,6 +213,7 @@ contract SomeFi is
     function setAccountRefInfo(
         address _sender,
         address referrerAddress,
+        address directRef,
         bool isLeft,
         uint256 _amount
     ) private {
@@ -244,6 +233,7 @@ contract SomeFi is
             checkIsValidRefAddress(referrerAddress);
             checkLeftRightAvailable(referrerAddress, isLeft);
             account.ref = referrerAddress;
+            account.directRef = directRef;
             Account storage referrer = refInfo[referrerAddress][roundId];
             referrer.branchInvestment += currentPackageSize;
 
@@ -252,6 +242,7 @@ contract SomeFi is
             } else {
                 referrer.right = _sender;
             }
+            updateDirectProfit(account, _amount);
             updateSenderSRef(_sender);
         }
     }
@@ -273,6 +264,7 @@ contract SomeFi is
             account.currentPackageSize = currentPackageSize;
         }
         if (account.ref != address(0)) {
+            updateDirectProfit(account, _amount);
             updateSenderSRef(_sender);
         }
     }
@@ -315,26 +307,26 @@ contract SomeFi is
         uint256 maxProfit = 0;
         uint256 commissionPercentage = 0;
         uint256 currentPackageSize = 0;
-        if (_amount >= pkgAmount[4] * etherValue) {
-            maxProfit = pkgAmount[4] * 3 * etherValue;
-            commissionPercentage = pkgRate[4];
-            currentPackageSize = pkgAmount[4] * etherValue;
-        } else if (_amount >= pkgAmount[3] * etherValue) {
-            maxProfit = pkgAmount[3] * 3 * etherValue;
-            commissionPercentage = pkgRate[3];
-            currentPackageSize = pkgAmount[3] * etherValue;
-        } else if (_amount >= pkgAmount[2] * etherValue) {
-            maxProfit = pkgAmount[2] * 3 * etherValue;
-            commissionPercentage = pkgRate[2];
-            currentPackageSize = pkgAmount[2] * etherValue;
-        } else if (_amount >= pkgAmount[1] * etherValue) {
-            maxProfit = pkgAmount[1] * 3 * etherValue;
-            commissionPercentage = pkgRate[1];
-            currentPackageSize = pkgAmount[1] * etherValue;
-        } else if (_amount >= pkgAmount[0] * etherValue) {
-            maxProfit = pkgAmount[0] * 3 * etherValue;
-            commissionPercentage = pkgRate[0];
-            currentPackageSize = pkgAmount[0] * etherValue;
+        if (_amount >= 5000 * etherValue) {
+            maxProfit = 5000 * 3 * etherValue;
+            commissionPercentage = 1000;
+            currentPackageSize = 5000 * etherValue;
+        } else if (_amount >= 3000 * etherValue) {
+            maxProfit = 3000 * 3 * etherValue;
+            commissionPercentage = 900;
+            currentPackageSize = 3000 * etherValue;
+        } else if (_amount >= 1000 * etherValue) {
+            maxProfit = 1000 * 3 * etherValue;
+            commissionPercentage = 800;
+            currentPackageSize = 1000 * etherValue;
+        } else if (_amount >= 500 * etherValue) {
+            maxProfit = 500 * 3 * etherValue;
+            commissionPercentage = 700;
+            currentPackageSize = 500 * etherValue;
+        } else if (_amount >= 100 * etherValue) {
+            maxProfit = 100 * 3 * etherValue;
+            commissionPercentage = 500;
+            currentPackageSize = 100 * etherValue;
         }
 
         return (maxProfit, commissionPercentage, currentPackageSize);
@@ -347,8 +339,7 @@ contract SomeFi is
         Account storage ref = refInfo[_refAddress][roundId];
         Account storage weakBranch = refInfo[_weakBranchAddress][roundId];
         ref.totalCommissionProfit =
-            ((weakBranch.branchInvestment * ref.commissionPercentage) /
-                oneHundredPercent) +
+            ((weakBranch.branchInvestment * ref.commissionPercentage) / 10000) +
             weakBranch.totalCommissionProfit;
     }
 
@@ -357,10 +348,12 @@ contract SomeFi is
     {
         Account storage ref = refInfo[_refAddress][roundId];
         Account storage weakBranch = refInfo[_weakBranchAddress][roundId];
+
         ref.profit =
             ((weakBranch.currentPackageSize * directCommissionPercentage) /
-                oneHundredPercent) +
-            ref.totalCommissionProfit;
+                10000) +
+            ref.totalCommissionProfit +
+            ref.directRefProfit;
     }
 
     function updateSenderSRef(address sender) private returns (uint256) {
@@ -465,10 +458,10 @@ contract SomeFi is
     function closeIco() external onlyOperator {
         icoHasEnded = true;
     }
-    
+
     // lock transfer token from Dapp
-     function setIsLockTokenDapp(bool _isLock) external onlyOwner {
-        isLockTokenDapp =_isLock;
+    function setIsLockTokenDapp(bool _isLock) external onlyOwner {
+        isLockTokenDapp = _isLock;
     }
 
     function transfer(address to, uint256 amount)
@@ -479,7 +472,8 @@ contract SomeFi is
         address owner = _msgSender();
         if (isLockTokenDapp) {
             uint256 amountToken = balanceOf(owner);
-            uint256 availableToken = amountToken - tokenFromDapp[owner][roundId];
+            uint256 availableToken = amountToken -
+                tokenFromDapp[owner][roundId];
             require(
                 availableToken >= amount,
                 "ERC20: transfer amount exceeds balance"
@@ -487,7 +481,7 @@ contract SomeFi is
             _transfer(owner, to, amount);
             return true;
         } else {
-           return super.transfer(to,amount);
+            return super.transfer(to, amount);
         }
     }
 
@@ -496,13 +490,10 @@ contract SomeFi is
         address to,
         uint256 amount
     ) internal override {
-        if (from == address(0) && isLockTokenDapp ) {
-           tokenFromDapp[to][roundId] += amount;
+        if (from == address(0) && isLockTokenDapp) {
+            tokenFromDapp[to][roundId] += amount;
         } else {
             super._beforeTokenTransfer(from, to, amount);
         }
     }
-
-    
-    
 }
